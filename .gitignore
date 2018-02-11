@@ -1,0 +1,7 @@
+# Python files
+*.py[cod]
+# Files containing pickled Python objects
+*.pkl
+# Config/log files
+*.cfg
+*.log
