@@ -36,7 +36,7 @@ default_config = \
     },
     "starboard": {
         "emoji": "⭐",
-        "mod_override": "true",
+        "mod_override": "false",
         "star_amount": 7,
         "star_channel": "326254078403543041"
     }
@@ -44,9 +44,4 @@ default_config = \
 """
 config.write(default_config)
 config.close()
-
-try:
-	open('chairbot9000.log', 'x').close()
-except FileExistsError:
-	pass
 print("Setup complete; run main.py now!")

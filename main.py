@@ -84,6 +84,26 @@ async def on_reaction_add(reaction, user):
 	else:
 		pass
 
+@bot.event
+async def on_reaction_remove(reaction, user):
+	if reaction.emoji == config["starboard"]["emoji"]:
+		reacts = reaction.message.reactions
+		# count the new amount of stars on a post
+		starcount = None
+		for react in reacts:
+			if react.emoji == config["starboard"]["emoji"]:
+				starlist = await bot.get_reaction_users(react)
+				starcount = len(starlist)
+				break
+		starchan = bot.get_channel(config["starboard"]["star_channel"])
+		# if the ID of the reaction's message is in the last 50 starboard posts,
+		async for found_message in bot.logs_from(starchan, limit=50):
+			if reaction.message.id in found_message.content:
+				# edit that starboard post with the new number of stars
+				new_content = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+				await bot.edit_message(found_message, new_content=new_content)
+				return
+
 @bot.check
 def check(ctx):
 	"""Before running a command, check if that command was used in a channel the bot is listening to.

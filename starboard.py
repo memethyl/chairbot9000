@@ -70,9 +70,9 @@ class Starboard():
 		mod_starred = False
 		starlist = None
 		starcount = None
-		for reaction in reacts:
-			if reaction.emoji == config["starboard"]["emoji"]:
-				starlist = await bot.get_reaction_users(reaction)
+		for react in reacts:
+			if react.emoji == config["starboard"]["emoji"]:
+				starlist = await bot.get_reaction_users(react)
 				starcount = len(starlist)
 				break
 		else:
@@ -92,7 +92,11 @@ class Starboard():
 			# start posting
 			starchan = bot.get_channel(config["starboard"]["star_channel"])
 			async for found_message in bot.logs_from(starchan, limit=50):
+				# if the ID of the starred message was in any of the last 50 starboard posts,
 				if reaction.message.id in found_message.content:
+					# edit the message on the board with the new star count
+					new_content = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+					await bot.edit_message(found_message, new_content=new_content)
 					return
 			embed = discord.Embed(color=discord.Colour.gold(), description=reaction.message.content)
 			name = reaction.message.author.name + '#' + reaction.message.author.discriminator
@@ -105,7 +109,7 @@ class Starboard():
 					post_image = item["url"]
 					try:
 						embed.set_image(url=post_image)
-						info = config["starboard"]["emoji"] + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+						info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
 						await bot.send_message(starchan, info, embed=embed)
 						await asyncio.sleep(1) # ratelimit shit idk
 						break
@@ -118,7 +122,7 @@ class Starboard():
 					# go through any image links that were found, try to embed them, and post the result
 					try:
 						embed.set_image(url=item[0])
-						info = config["starboard"]["emoji"] + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+						info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
 						await bot.send_message(starchan, info, embed=embed)
 						await asyncio.sleep(1)
 						break
@@ -128,7 +132,7 @@ class Starboard():
 				# no you're not reading this wrong, for loops DO have else clauses
 				# this only runs if the for loop above never runs "break"
 				else:
-					info = config["starboard"]["emoji"] + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+					info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
 					await bot.send_message(starchan, info, embed=embed)
 					await asyncio.sleep(1)
 
