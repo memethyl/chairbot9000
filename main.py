@@ -15,7 +15,9 @@ membercheck = Moderation.membercheck
 post_starred = Starboard.post_starred 
 handle_report = Utility.handle_report
 
+from aiohttp.errors import ClientOSError
 import asyncio
+from datetime import datetime
 import discord
 import logging
 from logging.handlers import RotatingFileHandler
@@ -34,7 +36,7 @@ handler = RotatingFileHandler(filename=config["main"]["log_filepath"], encoding=
 							  backupCount=config["main"]["log_backup_count"])
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-startup_extensions = ["moderation", "starboard", "broadcasting", "utility"]
+startup_extensions = ["moderation", "starboard", "broadcasting", "utility", "memes"]
 # NOTE: PREFIX CANNOT BE CHANGED ON THE FLY; RESTART THE BOT IF YOU CHANGE THE PREFIX IN CONFIG.CFG
 bot = commands.Bot(command_prefix=config["main"]["prefix"])
 server = bot.get_server('214249708711837696')
@@ -59,10 +61,20 @@ async def unload(extension_name: str):
 async def on_ready():
 	print('Logged in as')
 	print(bot.user.name)
+	print('at {0} UTC'.format(datetime.utcnow()))
 	print('------')
 
 @bot.event
 async def on_message(message):
+	# add reactions to report
+	if message.author.id == '204255221017214977' and message.channel.id == config["reporting"]["report_channel"]: 
+							 # YAGPDB.xyz#8760
+		await bot.add_reaction(message, '✅') # action taken
+		await bot.add_reaction(message, '🚫') # no action necessary
+		await bot.add_reaction(message, '⚠') # troll report
+	else:
+		pass
+	# alright now start processing commands or whatever
 	await bot.process_commands(message)
 
 @bot.event
@@ -73,8 +85,8 @@ async def on_member_join(member):
 async def on_reaction_add(reaction, user):
 	if reaction.emoji == config["starboard"]["emoji"]:
 		await post_starred(bot, config, reaction, user)
-	elif reaction.message.channel.id == config["reporting"]["report_channel"] and user.id != bot.user.id \
-	and reaction.message.author.id == '204255221017214977': # 204255221017214977 is backup automum (YAGPDB.xyz#8760)
+	elif reaction.message.channel.id == config["reporting"]["report_channel"] and user.bot is False \
+	and reaction.message.author.id == '204255221017214977':
 		await handle_report(bot, reaction, user)
 	# remove shrugs from pollbot polls
 	elif reaction.emoji == '🤷' and 'poll:' in reaction.message.content:
@@ -106,15 +118,14 @@ async def on_reaction_remove(reaction, user):
 
 @bot.check
 def check(ctx):
-	"""Before running a command, check if that command was used in a channel the bot is listening to.
-	Also, check if the user is a moderator.
-	If either of those requirements aren't met, do nothing."""
+	"""Before running a command, check if the user is a moderator.
+	If that requirement isn't met, do nothing."""
 	author_has_modrole = False
 	for role in ctx.message.author.roles:
 		if role.name == config["main"]["mod_role"]:
 			author_has_modrole = True
 	# note: because the modrole check is in here, all bot commands will be mod-only
-	if ctx.message.channel.id not in config["main"]["listening_channels"] or not author_has_modrole:
+	if not author_has_modrole:
 		return False
 	else:
 		return True
@@ -133,3 +144,13 @@ if __name__ == "__main__":
 		bot.run(tokenid)
 	except discord.LoginFailure:
 		print("Error: invalid token; run setup.py again, and make sure your token is correct!")
+	except KeyboardInterrupt:
+		bot.logout()
+		bot.close()
+		print("Logged out at {0} UTC".format(datetime.utcnow()))
+	# i don't have the slightest idea why the bot throws this so let's just sweep it under the rug
+	except ClientOSError:
+		print("FUCK")
+		bot.logout()
+		bot.close()
+		bot.run(tokenid)

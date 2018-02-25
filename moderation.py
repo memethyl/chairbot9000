@@ -15,7 +15,7 @@ class Moderation():
 	async def shutdown(self, ctx, *channels: discord.Channel):
 		"""Shuts down one or more channels, preventing thonks from talking in them."""
 		# affected channels get pickled into a file, 
-		# so that $restore can automatically restore whichever channel(s) you shut down
+		# so that &restore can automatically restore whichever channel(s) you shut down
 		channels_file = open('channels_shutdown.pkl', 'wb')
 		if len(channels) != 0:
 			thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
@@ -93,7 +93,7 @@ class Moderation():
 	async def pmute(self, ctx, *users: discord.Member):
 		"""Permanently mute one or more users."""
 		muterole = discord.utils.get(ctx.message.author.server.roles, name='Muted')
-		async for user in users:
+		for user in users:
 			await self.bot.add_roles(user, muterole)
 		if len(users) > 1:
 			content = 'Users '+''.join([user.mention for user in users])+' have been permanently muted.'
@@ -107,11 +107,11 @@ class Moderation():
 	async def membercheck(bot, config, member, server):
 		"""Check the difference between a member's account creation time and their join time.
 		   If the delta between those two is less than the autoban amount in config.cfg,
-		   ban the member and leave a reason why in #mums_office."""
+		   ban the member and leave a reason why in the appropriate channel."""
 		join_time = member.joined_at
 		creation_time = member.created_at
 		delta = join_time - creation_time
-		delta = delta.seconds
+		delta = delta.total_seconds()
 		if delta/60 <= config["automod"]["autoban_mins"]:
 			await bot.ban(member)
 			hours = floor(delta/3600)
@@ -124,7 +124,7 @@ class Moderation():
 			content = "Banned {0} for being a new account\nAccount created at: {1}\nAccount joined at: {2}\nDelta: {3}".format(\
 						member.mention, creation_time.strftime("%Y-%m-%d %H:%M:%S"), join_time.strftime("%Y-%m-%d %H:%M:%S"), \
 						deltastr)
-			channel = bot.get_channel('305194878139367427') #mums_office
+			channel = bot.get_channel(config["automod"]["banlog_channel"])
 			await sendembed(bot, channel=channel, color=discord.Colour.gold(),
 							title="⚠️ Newly Created Account Banned", content=content)
 
