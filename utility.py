@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
-from misc import Config, sendembed
 import json
+from misc import Config, sendembed
 save_config = Config.save_config
 read_config = Config.read_config
 
@@ -25,39 +25,42 @@ class Utility():
 		else:
 			return
 		await bot.delete_message(reaction.message)
-	@commands.command(pass_context=True)
-	async def modset(self, ctx, role: discord.Role):
+	@commands.command(pass_context=True, description="Set the mod role BY NAME for future permissions checks.\nNOTE: THIS MEANS ROLE MENTIONS WON'T WORK HERE")
+	async def modset(self, ctx, rolename: str):
 		"""Set the moderator role BY NAME for future permissions checks."""
-		self.config["main"]["mod_role"] = role.name
-		self.config = save_config(self.config)
-		content = "Mod role set to {0}.".format(role.name)
-		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
-						title="Mod Role Set", content=content)
-	@commands.command(pass_context=True)
-	async def listen(self, ctx, channel: discord.Channel):
-		"""Toggle whether or not the bot should listen to a channel."""
-		if channel.id not in self.config["main"]["listening_channels"]:
-			self.config["main"]["listening_channels"].append(channel.id)
-			self.config = save_config(self.config)
-			content = "Now listening to channel {0} for commands.".format(channel.mention)
+		if discord.utils.get(ctx.message.server.roles, name=rolename) is None:
+			content = "Error: couldn't find role {0} in the server's roles!".format(rolename)
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-							title="Now Listening To Channel", content=content)
+							title="Unable to Set Mod Role", content=content)
 		else:
-			self.config["main"]["listening_channels"].remove(channel.id)
+			self.config["main"]["mod_role"] = rolename
 			self.config = save_config(self.config)
-			content = "No longer listening to channel {0} for commands.".format(channel.mention)
-			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-							title="Stopped Listening To Channel", content=content)
-	@commands.command(pass_context=True)
+			content = "Mod role set to {0}.".format(rolename)
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
+							title="Mod Role Set", content=content)
+	@commands.command(pass_context=True, description="Send a DM containing the bot's current config.")
 	async def settings(self, ctx):
 		"""Sends a DM containing the bot's current config."""
-		try:
-			# send a DM containing the bot's current config
-			await self.bot.send_message(ctx.message.author, '```json\n'+json.dumps(self.config, indent=4, sort_keys=True)+'\n```')
-			# tell the user they've been sent a DM
-			await self.bot.send_message(ctx.message.channel, "You have been sent a DM containing the bot's current config.")
-		except discord.Forbidden:
-			await self.bot.send_message(ctx.message.channel, "I was unable to send you a DM; make sure I can message you before running this command again!")
+		config_str = json.dumps(self.config, indent=4, sort_keys=True, ensure_ascii=False)
+		# if the config is too big for one message,
+		if len(config_str) > 1988: # (excluding the leading ```json\n and ending \n``` bits)
+			# then send the DM piece by piece
+			for i in range(0, len(config_str), 1988):
+				try:
+					await self.bot.send_message(ctx.message.author, '```json\n' + config_str[i:i+1988] + '\n```')
+				except discord.Forbidden:
+					await self.bot.send_message(ctx.message.channel, "I was unable to send you a DM; make sure I can message you before running this command again!")
+					break
+			else:
+				await self.bot.send_message(ctx.message.channel, "You have been sent a DM containing the bot's current config.")
+		else:
+			try:
+				# send a DM containing the bot's current config
+				await self.bot.send_message(ctx.message.author, '```json\n' + config_str + '\n```')
+				await self.bot.send_message(ctx.message.channel, "You have been sent a DM containing the bot's current config.")
+			except discord.Forbidden:
+				await self.bot.send_message(ctx.message.channel, "I was unable to send you a DM; make sure I can message you before running this command again!")
+
 
 def setup(bot):
 	bot.add_cog(Utility(bot))

@@ -12,14 +12,14 @@ class Starboard():
 	def __init__(self, bot):
 		self.bot = bot
 		self.config = read_config()
-	@commands.group(pass_context=True)
+	@commands.group(pass_context=True, description="&starboard [set/num] [channel/minimum stars]")
 	async def starboard(ctx):
-		"""$starboard [set/num] ..."""
+		"""&starboard [set/num] ..."""
 		if ctx.invoked_subcommand is None:
-			content = "Correct syntax: `$starboard [set/num] [channel/minimum stars]"
+			content = "Correct syntax: `&starboard [set/num] [channel/minimum stars]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
-	@starboard.command(pass_context=True)
+	@starboard.command(pass_context=True, description="Set the channel that starboard messages should be posted in.")
 	async def set(self, ctx, channel: discord.Channel):
 		"""Subcommand of starboard that sets the channel starboard messages should be posted in."""
 		if channel:
@@ -29,10 +29,10 @@ class Starboard():
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
 							title="Starboard Channel Set")
 		else:
-			content = "Correct syntax: `$starboard set [channel]"
+			content = "Correct syntax: `&starboard set [channel]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
-	@starboard.command(pass_context=True)
+	@starboard.command(pass_context=True, description="Set the number of stars required for a post to go on the board.")
 	async def num(self, ctx, amount: int):
 		"""Subcommand of starboard that sets the number of stars a post needs to make it on the board."""
 		if amount == 0: amount = 1
@@ -41,7 +41,7 @@ class Starboard():
 		content = "Required amount of stars set to {0}.".format(str(amount))
 		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
 						title="Star Amount Set", content=content)
-	@commands.command(pass_context=True)
+	@commands.command(pass_context=True, description="Set whether or not moderators can override the star requirement.\n(to set the mod role, see &modset)")
 	async def modstar(self, ctx, value: str):
 		"""Sets whether or not moderators are able to override the star amount requirement."""
 		if value.lower() == 'true' or value.lower() == 'false':
@@ -52,7 +52,7 @@ class Starboard():
 			await sendembed(self.bot, channel=ctx.message.channel, color=color,
 							title="Mod Star Override Set", content=content)
 		else:
-			content = "Correct syntax: `$modstar [true/false]`"
+			content = "Correct syntax: `&modstar [true/false]`"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
 	@staticmethod
@@ -88,7 +88,7 @@ class Starboard():
 			return
 		# if starcount is greater than required (or a mod starred it and override is enabled), and the message being starred isn't from the bot,
 		if (starcount >= config["starboard"]["star_amount"] or (mod_starred and config["starboard"]["mod_override"] == 'true')) \
-		and reaction.message.author.id != '390322499650584577':
+		and reaction.message.author.id != bot.user.id:
 			# start posting
 			starchan = bot.get_channel(config["starboard"]["star_channel"])
 			async for found_message in bot.logs_from(starchan, limit=50):

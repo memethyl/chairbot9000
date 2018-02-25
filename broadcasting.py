@@ -16,7 +16,7 @@ class Broadcasting():
 		except:
 			content = "Couldn't kick {0} from the station; try again later!".format(', '.join([user.mention for user in users]))
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-							title="Failed To Kick", content=content)
+							title="Failed to Kick", content=content)
 			return
 		for user in users:
 			await self.bot.move_member(user, kickchan)
@@ -30,11 +30,11 @@ class Broadcasting():
 						title="Kicked Successfully", content=content)
 	@commands.group(pass_context=True)
 	async def broadcast(self, ctx):
-		"""$broadcast [add/remove/start/end] ..."""
+		"""&broadcast [add/remove/start/end] ..."""
 		if ctx.invoked_subcommand is None:
-			content = "Correct syntax: `$broadcast [add/remove/start/end] [@user1 @user2 for changing broadcasters / description for starting a broadcast]"
+			content = "Correct syntax: `&broadcast [add/remove/start/end] [@user1 @user2 for changing broadcasters / description for starting a broadcast]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-							title="Invalid Command Syntax", content=content)
+							title="Invalid command syntax", content=content)
 	@broadcast.command(pass_context=True, description="Add a user as a broadcaster.")
 	async def add(self, ctx, *users: discord.Member):
 		"""Gives a user speaking privileges in the broadcast voice channel."""
@@ -49,7 +49,7 @@ class Broadcasting():
 			else:
 				content = "Please manually unmute the broadcaster(s). You must be in the voice channel for automated unmute to work."
 				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-								title="Unable To Unmute", content=content)
+								title="Unable to Unmute", content=content)
 	@broadcast.command(pass_context=True, description="Remove a broadcaster, turning them back into a listener.")
 	async def remove(self, ctx, *users: discord.Member):
 		"""Removes a user's speaking privileges in the broadcast voice channel."""
@@ -64,7 +64,7 @@ class Broadcasting():
 			else:
 				content = "Please manually mute the broadcaster(s). You must be in the voice channel for automated mute to work."
 				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-								title="Unable To Mute", content=content)
+								title="Unable to Mute", content=content)
 	@broadcast.command(pass_context=True, description="Start a broadcast.")
 	async def start(self, ctx, *, description: str="General Broadcast"):
 		"""Sends a message in the configured broadcast announcement channel, and opens the configured voice channel for people to join."""
@@ -88,7 +88,7 @@ class Broadcasting():
 		if ctx.message.author.voice_channel is None or ctx.message.author.voice_channel != voicechan:
 			content = "You must be in the broadcast voice channel to end the broadcast."
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
-							title="Failed To End Broadcast", content=content)
+							title="Failed to End Broadcast", content=content)
 		else:
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Ending Broadcast", content="Now ending the broadcast.")
@@ -108,9 +108,9 @@ class Broadcasting():
 		for item in vc_perms:
 			if type(item[0]) is discord.Member:
 				await self.bot.delete_channel_permissions(voicechan, item[0])
-	@broadcast.command(pass_context=True, description="Alias for $broadcast end.")
+	@broadcast.command(pass_context=True, description="Alias for &broadcast end.")
 	async def stop(self, ctx):
-		"""(alias for $broadcast end)"""
+		"""(alias for &broadcast end)"""
 		self.end(ctx)
 
 def setup(bot):
