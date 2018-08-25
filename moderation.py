@@ -1,3 +1,4 @@
+from asyncio import sleep
 import discord
 from math import floor
 from discord.ext import commands
@@ -89,6 +90,7 @@ class Moderation():
 		amount += 1
 		async for message in self.bot.logs_from(ctx.message.channel, amount):
 			await self.bot.delete_message(message)
+			await sleep(0.5) # ratelimit shit idk
 	@commands.command(pass_context=True, description="Permanently mute one or more users.")
 	async def pmute(self, ctx, *users: discord.Member):
 		"""Permanently mute one or more users."""
@@ -99,10 +101,14 @@ class Moderation():
 			content = 'Users '+''.join([user.mention for user in users])+' have been permanently muted.'
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Users Muted", content=content, author=ctx.message.author)
-		else:
+		elif len(users) == 1:
 			content = 'User '+users[0].mention+' has been permanently muted.'
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="User Muted", content=content, author=ctx.message.author)
+		else:
+			content = "Correct syntax: &pmute @user1 [@user2] [...]"
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
+							title="Invalid command syntax", content=content)
 	@staticmethod
 	async def membercheck(bot, config, member, server):
 		"""Check the difference between a member's account creation time and their join time.

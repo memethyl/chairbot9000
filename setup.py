@@ -34,7 +34,10 @@ try:
     "starboard": {
         "emoji": "⭐",
         "mod_override": "false",
-        "star_amount": 7,
+        "star_amounts": {
+            "global": 5,
+            "insert_channel_name_here": 13
+        },
         "star_channel": "326254078403543041"
     },
     "memes": {

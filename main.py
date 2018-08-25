@@ -16,11 +16,10 @@ post_starred = Starboard.post_starred
 handle_report = Utility.handle_report
 
 from aiohttp.errors import ClientOSError
+from asyncio import CancelledError
 import asyncio
 from datetime import datetime
 import discord
-import logging
-from logging.handlers import RotatingFileHandler
 import pickle
 from discord.ext import commands
 from misc import Config
@@ -28,14 +27,6 @@ read_config = Config.read_config
 
 config = read_config()
 
-# this allows discord.py to do automatic logging
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
-handler = RotatingFileHandler(filename=config["main"]["log_filepath"], encoding='utf-8', mode='w', \
-							  maxBytes=config["main"]["max_log_size_bytes"], \
-							  backupCount=config["main"]["log_backup_count"])
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
 startup_extensions = ["moderation", "starboard", "broadcasting", "utility", "memes"]
 # NOTE: PREFIX CANNOT BE CHANGED ON THE FLY; RESTART THE BOT IF YOU CHANGE THE PREFIX IN CONFIG.CFG
 bot = commands.Bot(command_prefix=config["main"]["prefix"])
@@ -131,26 +122,30 @@ def check(ctx):
 		return True
 
 if __name__ == "__main__":
-	for extension in startup_extensions:
+	while True:
 		try:
-			bot.load_extension(extension)
+			for extension in startup_extensions:
+				try:
+					bot.load_extension(extension)
+				except Exception as e:
+					exc = '{}: {}'.format(type(e).__name__, e)
+					print('Failed to load extension {}\n{}'.format(extension, exc))
+			tokenobject = open('tokenid.pkl', 'rb')
+			tokenid = pickle.load(tokenobject)
+			tokenobject.close()
+			bot.run(tokenid)
+		except discord.LoginFailure:
+			print("Error: invalid token; run setup.py again, and make sure your token is correct!")
+			break
+		except KeyboardInterrupt:
+			bot.close()
+			print("Logged out at {0} UTC".format(datetime.utcnow()))
+			break
+		except RuntimeError:
+			bot.close()
+			break
 		except Exception as e:
-			exc = '{}: {}'.format(type(e).__name__, e)
-			print('Failed to load extension {}\n{}'.format(extension, exc))
-	try:
-		tokenobject = open('tokenid.pkl', 'rb')
-		tokenid = pickle.load(tokenobject)
-		tokenobject.close()
-		bot.run(tokenid)
-	except discord.LoginFailure:
-		print("Error: invalid token; run setup.py again, and make sure your token is correct!")
-	except KeyboardInterrupt:
-		bot.logout()
-		bot.close()
-		print("Logged out at {0} UTC".format(datetime.utcnow()))
-	# i don't have the slightest idea why the bot throws this so let's just sweep it under the rug
-	except ClientOSError:
-		print("FUCK")
-		bot.logout()
-		bot.close()
-		bot.run(tokenid)
+			pass
+		# and this bit of code restarts the bot
+		finally:
+			bot.close()
