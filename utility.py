@@ -1,14 +1,12 @@
+import config
 import discord
 from discord.ext import commands
 import json
-from misc import Config, sendembed
-save_config = Config.save_config
-read_config = Config.read_config
+from misc import sendembed
 
 class Utility():
 	def __init__(self, bot):
 		self.bot = bot
-		self.config = read_config()
 	@staticmethod
 	async def handle_report(bot, reaction, user):
 		"""Handle a report when a user has reacted to a YAGPDB report."""
@@ -33,15 +31,15 @@ class Utility():
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Unable to Set Mod Role", content=content)
 		else:
-			self.config["main"]["mod_role"] = rolename
-			self.config = save_config(self.config)
+			config.cfg["main"]["mod_role"] = rolename
+			config.UpdateConfig.save_config(config.cfg)
 			content = "Mod role set to {0}.".format(rolename)
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
 							title="Mod Role Set", content=content)
 	@commands.command(pass_context=True, description="Send a DM containing the bot's current config.")
 	async def settings(self, ctx):
 		"""Sends a DM containing the bot's current config."""
-		config_str = json.dumps(self.config, indent=4, sort_keys=True, ensure_ascii=False)
+		config_str = json.dumps(config.cfg, indent=4, sort_keys=True, ensure_ascii=False)
 		# if the config is too big for one message,
 		if len(config_str) > 1988: # (excluding the leading ```json\n and ending \n``` bits)
 			# then send the DM piece by piece

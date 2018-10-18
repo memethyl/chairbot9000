@@ -1,17 +1,15 @@
 import asyncio
 import datetime
-import discord
 from discord.ext import commands
+import discord
 import json
+from misc import sendembed
 import re
-from misc import Config, sendembed
-save_config = Config.save_config
-read_config = Config.read_config
+import config
 
 class Starboard():
 	def __init__(self, bot):
 		self.bot = bot
-		self.config = read_config()
 	@commands.group(pass_context=True)
 	async def starboard(self, ctx):
 		"""&starboard [set/num/addpost] ..."""
@@ -23,8 +21,8 @@ class Starboard():
 	async def set(self, ctx, channel: discord.Channel):
 		"""Subcommand of starboard that sets the channel starboard messages should be posted in."""
 		if channel:
-			self.config["starboard"]["star_channel"] = channel.id
-			self.config = save_config(self.config)
+			config.cfg["starboard"]["star_channel"] = channel.id
+			config.UpdateConfig.save_config(config.cfg)
 			content = "Starboard channel set to {0}.".format(channel.mention)
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
 							title="Starboard Channel Set")
@@ -34,13 +32,24 @@ class Starboard():
 							title="Invalid command syntax", content=content)
 	@starboard.command(pass_context=True, description="Set the number of stars required for a post to go on the board.")
 	async def num(self, ctx, channel: discord.Channel, amount: int):
-		"""Subcommand of starboard that sets the number of stars a post needs to make it on the board."""
-		if amount == 0: amount = 1
-		self.config["starboard"]["star_amounts"][channel.name] = amount
-		self.config = save_config(self.config)
-		content = "Required amount of stars for {0} set to {1}.".format(channel.mention, str(amount))
-		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
-						title="Star Amount Set", content=content)
+		"""Subcommand of starboard that sets the number of stars a post needs to make it on the board. (0 to remove)"""
+		if amount == 0:
+			try:
+				del config.cfg["starboard"]["star_amounts"][channel.name]
+				config.UpdateConfig.save_config(config.cfg)
+				content = "Removed amount of stars for {0}; channel now defaults to {1}.".format(channel.mention, config.cfg["starboard"]["star_amounts"]["global"])
+				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
+								title="Removed Star Amount", content=content)
+			except KeyError:
+				content = "Error: {0} doesn't have a custom star amount!".format(channel.mention)
+				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
+								title="Invalid command", content=content)
+		else:
+			config.cfg["starboard"]["star_amounts"][channel.name] = amount
+			config.UpdateConfig.save_config(config.cfg)
+			content = "Required amount of stars for {0} set to {1}.".format(channel.mention, str(amount))
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
+							title="Star Amount Set", content=content)
 	@starboard.command(pass_context=True, description="Manually add a post to the starboard. Useful for when chairbot decides to ignore a post")
 	async def addpost(self, ctx, message_chan: discord.Channel, message_id: str):
 		message = await self.bot.get_message(message_chan, message_id)
@@ -48,7 +57,7 @@ class Starboard():
 		reacts = message.reactions
 		starlist = starcount = None
 		for react in reacts:
-			if react.emoji == self.config["starboard"]["emoji"]:
+			if react.emoji == config.cfg["starboard"]["emoji"]:
 				starlist = await self.bot.get_reaction_users(react)
 				starcount = len(starlist)
 				break
@@ -57,7 +66,7 @@ class Starboard():
 		# copy-paste powers, activate
 		embed = discord.Embed(color=discord.Colour.gold(), description=message.content)
 		name = message.author.name + "#" + message.author.discriminator
-		starchan = self.bot.get_channel(self.config["starboard"]["star_channel"])
+		starchan = self.bot.get_channel(config.cfg["starboard"]["star_channel"])
 		embed.set_author(name=name, icon_url=message.author.avatar_url)
 		embed.timestamp = datetime.datetime.now()
 		found_embeds = message.attachments
@@ -67,7 +76,7 @@ class Starboard():
 				try:
 					post_image = item["url"]
 					embed.set_image(url=post_image)
-					info = self.config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
+					info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
 					await self.bot.send_message(starchan, info, embed=embed)
 					await asyncio.sleep(1) # ratelimit shit idk
 					break
@@ -80,7 +89,7 @@ class Starboard():
 				# go through any image links that were found, try to embed them, and post the result
 				try:
 					embed.set_image(url=item[0])
-					info = self.config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
+					info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
 					await self.bot.send_message(starchan, info, embed=embed)
 					await asyncio.sleep(1)
 					break
@@ -90,15 +99,15 @@ class Starboard():
 			# no you're not reading this wrong, for loops DO have else clauses
 			# this only runs if the for loop above never runs "break"
 			else:
-				info = self.config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
+				info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + message.id
 				await self.bot.send_message(starchan, info, embed=embed)
 				await asyncio.sleep(1)
 	@commands.command(pass_context=True, description="Set whether or not moderators can override the star requirement.\n(to set the mod role, see &modset)")
 	async def modstar(self, ctx, value: str):
 		"""Sets whether or not moderators are able to override the star amount requirement."""
 		if value.lower() == 'true' or value.lower() == 'false':
-			self.config["starboard"]["mod_override"] = value.lower()
-			self.config = save_config(self.config)
+			config.cfg["starboard"]["mod_override"] = value.lower()
+			config.UpdateConfig.save_config(config.cfg)
 			content = "Mod star override set to {0}.".format(value.lower())
 			color = discord.Colour.dark_green() if value.lower() == 'true' else discord.Colour.dark_red()
 			await sendembed(self.bot, channel=ctx.message.channel, color=color,

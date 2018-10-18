@@ -1,17 +1,16 @@
 from asyncio import sleep
+import config
+from discord.ext import commands
 import discord
 from math import floor
-from discord.ext import commands
-from misc import Config, sendembed
+from misc import sendembed
 from os import remove
 import pickle
-save_config = Config.save_config
-read_config = Config.read_config
+import re
 
 class Moderation():
 	def __init__(self, bot):
 		self.bot = bot
-		self.config = read_config()
 	@commands.command(pass_context=True, description="Shuts down one or more channels to prevent thonks from typing in them.")
 	async def shutdown(self, ctx, *channels: discord.Channel):
 		"""Shuts down one or more channels, preventing thonks from talking in them."""
@@ -133,6 +132,14 @@ class Moderation():
 			channel = bot.get_channel(config["automod"]["banlog_channel"])
 			await sendembed(bot, channel=channel, color=discord.Colour.gold(),
 							title="⚠️ Newly Created Account Banned", content=content)
+		# invite bots :ree:
+		invite_regex = config["automod"]["invite_regex"]
+		if re.search(invite_regex, str(member.name)) or re.search(invite_regex, str(member.nick)):
+			await bot.ban(member)
+			content = "Banned {0} for being a fucking invite bot".format(member.mention)
+			channel = bot.get_channel(config["automod"]["banlog_channel"])
+			await sendembed(bot, channel=channel, color=discord.Colour.gold(),
+							title="⚠️ Invite Bot Banned ⚠️", content=content)
 
 def setup(bot):
 	bot.add_cog(Moderation(bot))

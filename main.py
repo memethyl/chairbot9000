@@ -18,18 +18,17 @@ handle_report = Utility.handle_report
 from aiohttp.errors import ClientOSError
 from asyncio import CancelledError
 import asyncio
+import config
+config.init()
 from datetime import datetime
-import discord
-import pickle
 from discord.ext import commands
-from misc import Config
-read_config = Config.read_config
-
-config = read_config()
+import discord
+from misc import sendembed
+import pickle
 
 startup_extensions = ["moderation", "starboard", "broadcasting", "utility", "memes"]
 # NOTE: PREFIX CANNOT BE CHANGED ON THE FLY; RESTART THE BOT IF YOU CHANGE THE PREFIX IN CONFIG.CFG
-bot = commands.Bot(command_prefix=config["main"]["prefix"])
+bot = commands.Bot(command_prefix=config.cfg["main"]["prefix"])
 server = bot.get_server('214249708711837696')
 
 # shamelessly stolen from https://gist.github.com/leovoel/46cd89ed6a8f41fd09c5
@@ -58,7 +57,7 @@ async def on_ready():
 @bot.event
 async def on_message(message):
 	# add reactions to report
-	if message.author.id == '204255221017214977' and message.channel.id == config["reporting"]["report_channel"]: 
+	if message.author.id == '204255221017214977' and message.channel.id == config.cfg["reporting"]["report_channel"]: 
 							 # YAGPDB.xyz#8760
 		await bot.add_reaction(message, '✅') # action taken
 		await bot.add_reaction(message, '🚫') # no action necessary
@@ -70,13 +69,13 @@ async def on_message(message):
 
 @bot.event
 async def on_member_join(member):
-	await membercheck(bot, config, member, server)
+	await membercheck(bot, config.cfg, member, server)
 
 @bot.event
 async def on_reaction_add(reaction, user):
-	if reaction.emoji == config["starboard"]["emoji"]:
-		await post_starred(bot, config, reaction, user)
-	elif reaction.message.channel.id == config["reporting"]["report_channel"] and user.bot is False \
+	if reaction.emoji == config.cfg["starboard"]["emoji"]:
+		await post_starred(bot, config.cfg, reaction, user)
+	elif reaction.message.channel.id == config.cfg["reporting"]["report_channel"] and user.bot is False \
 	and reaction.message.author.id == '204255221017214977':
 		await handle_report(bot, reaction, user)
 	# remove shrugs from pollbot polls
@@ -89,21 +88,21 @@ async def on_reaction_add(reaction, user):
 
 @bot.event
 async def on_reaction_remove(reaction, user):
-	if reaction.emoji == config["starboard"]["emoji"]:
+	if reaction.emoji == config.cfg["starboard"]["emoji"]:
 		reacts = reaction.message.reactions
 		# count the new amount of stars on a post
 		starcount = None
 		for react in reacts:
-			if react.emoji == config["starboard"]["emoji"]:
+			if react.emoji == config.cfg["starboard"]["emoji"]:
 				starlist = await bot.get_reaction_users(react)
 				starcount = len(starlist)
 				break
-		starchan = bot.get_channel(config["starboard"]["star_channel"])
+		starchan = bot.get_channel(config.cfg["starboard"]["star_channel"])
 		# if the ID of the reaction's message is in the last 50 starboard posts,
 		async for found_message in bot.logs_from(starchan, limit=50):
 			if reaction.message.id in found_message.content:
 				# edit that starboard post with the new number of stars
-				new_content = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
+				new_content = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
 				await bot.edit_message(found_message, new_content=new_content)
 				return
 
@@ -113,7 +112,7 @@ def check(ctx):
 	If that requirement isn't met, do nothing."""
 	author_has_modrole = False
 	for role in ctx.message.author.roles:
-		if role.name == config["main"]["mod_role"]:
+		if role.name == config.cfg["main"]["mod_role"]:
 			author_has_modrole = True
 	# note: because the modrole check is in here, all bot commands will be mod-only
 	if not author_has_modrole:

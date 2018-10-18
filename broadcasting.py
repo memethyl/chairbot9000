@@ -1,13 +1,11 @@
+import config
 import discord
 from discord.ext import commands
-from misc import Config, sendembed
-save_config = Config.save_config
-read_config = Config.read_config
+from misc import sendembed
 
 class Broadcasting():
 	def __init__(self, bot):
 		self.bot = bot
-		self.config = read_config()
 	@commands.command(pass_context=True, description="Kick one or more users from the broadcast voice channel.")
 	async def bkick(self, ctx, *users: discord.Member):
 		"""Kicks one or more users from the broadcast voice channel."""
@@ -38,7 +36,7 @@ class Broadcasting():
 	@broadcast.command(pass_context=True, description="Add a user as a broadcaster.")
 	async def add(self, ctx, *users: discord.Member):
 		"""Gives a user speaking privileges in the broadcast voice channel."""
-		voicechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["broadcast_vc"])
+		voicechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["broadcast_vc"])
 		broadcast_perm = discord.PermissionOverwrite()
 		broadcast_perm.connect = True
 		broadcast_perm.speak = True
@@ -53,7 +51,7 @@ class Broadcasting():
 	@broadcast.command(pass_context=True, description="Remove a broadcaster, turning them back into a listener.")
 	async def remove(self, ctx, *users: discord.Member):
 		"""Removes a user's speaking privileges in the broadcast voice channel."""
-		voicechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["broadcast_vc"])
+		voicechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["broadcast_vc"])
 		broadcast_perm = discord.PermissionOverwrite()
 		broadcast_perm.connect = None
 		broadcast_perm.speak = False
@@ -68,10 +66,10 @@ class Broadcasting():
 	@broadcast.command(pass_context=True, description="Start a broadcast.")
 	async def start(self, ctx, *, description: str="General Broadcast"):
 		"""Sends a message in the configured broadcast announcement channel, and opens the configured voice channel for people to join."""
-		voicechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["broadcast_vc"])
+		voicechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["broadcast_vc"])
 		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
 						title="Broadcast Starting", content="Now starting a broadcast.")
-		announcechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["announce_channel"])
+		announcechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["announce_channel"])
 		content = ctx.message.author.mention + " has started a broadcast: \n\n" + description + \
 				  "\n\nTo listen, join the Mum\'s Station voice channel. Please keep discussion to the automatically available home theater text channel."
 		await sendembed(self.bot, channel=announcechan, color=discord.Colour.dark_green(),
@@ -84,7 +82,7 @@ class Broadcasting():
 	@broadcast.command(pass_context=True, description="End a broadcast.")
 	async def end(self, ctx):
 		"""Announces that the broadcast has ended, and kicks all users out of the broadcast voice channel."""
-		voicechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["broadcast_vc"])
+		voicechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["broadcast_vc"])
 		if ctx.message.author.voice_channel is None or ctx.message.author.voice_channel != voicechan:
 			content = "You must be in the broadcast voice channel to end the broadcast."
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
@@ -92,7 +90,7 @@ class Broadcasting():
 		else:
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Ending Broadcast", content="Now ending the broadcast.")
-			announcechan = discord.utils.get(ctx.message.server.channels, id=self.config["broadcasting"]["announce_channel"])
+			announcechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["announce_channel"])
 			thonks_perm.connect = False
 			thonks_perm.speak = False
 			await self.bot.edit_channel_permissions(voicechan, thonks, thonks_perm)
