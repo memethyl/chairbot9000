@@ -108,6 +108,48 @@ class Moderation():
 			content = "Correct syntax: &pmute @user1 [@user2] [...]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
+	@commands.command(pass_context=True, description="Ban multiple IDs at once.")
+	async def multiban(self, ctx, *users: str):
+		"""Ban multiple IDs at once. Do NOT ping users in this command."""
+		# todo: actual permissions system
+		for role in ctx.message.author.roles:
+			if role.name == config.cfg["automod"]["multiban_role"]:
+				break
+		else:
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
+							title="Insufficient Permissions", content="This command is for admins only.")
+			return
+		content = "Please provide a ban reason. (for no ban reason, reply \"none\"; to abort, reply \"abort\")"
+		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.gold(),
+						title="Optional Ban Reason", content=content)
+		reason = await self.bot.wait_for_message(timeout=10, author=ctx.message.author, channel=ctx.message.channel)
+		if reason is not None and reason.content.lower() == "abort":
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
+							title="Aborting Multiban", content="Multiban aborted.")
+			return
+		else:
+			if reason is None or reason.content.lower() == "none":
+				reason = "No reason provided."
+				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.gold(),
+								title="No Ban Reason Given", content="No reply received; continuing without a ban reason.")
+			failed_bans = []
+			successful_bans = []
+			for user in users:
+				try:
+					user_object = await self.bot.get_user_info(user)
+					await self.bot.ban(user_object)
+					successful_bans.append(user)
+				except discord.errors.NotFound:
+					failed_bans.append(user)
+			if len(successful_bans) == 0:
+				content = "No users successfully banned"
+			else:
+				content = "Successfully banned users {0}".format(''.join(["`"+x+"`, " for x in users if x not in failed_bans]))
+				if len(failed_bans) > 0:
+					content += "\nFailed to ban users {0}".format(''.join(["`"+x+"`, " for x in failed_bans]))
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_green(),
+							title="{0} Successful Bans, {1} Failed Bans".format(len(successful_bans), len(failed_bans)),
+							content=content)
 	@staticmethod
 	async def membercheck(bot, config, member, server):
 		"""Check the difference between a member's account creation time and their join time.
