@@ -1,8 +1,8 @@
-import config
+from . import config
 import discord
 from discord.ext import commands
 import json
-from misc import sendembed
+from .misc import sendembed
 
 class Utility():
 	def __init__(self, bot):

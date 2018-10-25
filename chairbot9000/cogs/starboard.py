@@ -1,11 +1,11 @@
 import asyncio
+from . import config
 import datetime
 from discord.ext import commands
 import discord
 import json
-from misc import sendembed
+from .misc import sendembed
 import re
-import config
 
 class Starboard():
 	def __init__(self, bot):
@@ -106,7 +106,7 @@ class Starboard():
 	async def modstar(self, ctx, value: str):
 		"""Sets whether or not moderators are able to override the star amount requirement."""
 		if value.lower() == 'true' or value.lower() == 'false':
-			config.cfg["starboard"]["mod_override"] = value.lower()
+			config.cfg["starboard"]["role_override"] = value.lower()
 			config.UpdateConfig.save_config(config.cfg)
 			content = "Mod star override set to {0}.".format(value.lower())
 			color = discord.Colour.dark_green() if value.lower() == 'true' else discord.Colour.dark_red()
@@ -121,7 +121,7 @@ class Starboard():
 			server = bot.get_server('214249708711837696')
 			member = server.get_member(user.id)
 			for role in member.roles:
-				if role.name == config["main"]["mod_role"]:
+				if role.name == config["starboard"]["override_role"]:
 					return True
 			return False
 	@staticmethod
@@ -155,7 +155,7 @@ class Starboard():
 				starcount_reached = True
 		# check if a mod starred the post
 		for reactor in starlist:
-			if Starboard.modcheck(bot, config, reactor) and config["starboard"]["mod_override"] == "true":
+			if Starboard.modcheck(bot, config, reactor) and config["starboard"]["role_override"] == "true":
 				starcount_reached = True
 				break
 

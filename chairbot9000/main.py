@@ -1,5 +1,5 @@
 try:
-	tokenobject = open('tokenid.pkl', 'rb')
+	tokenobject = open('misc/tokenid.pkl', 'rb')
 	tokenobject.close()
 except FileNotFoundError:
 	print("Error: tokenid.pkl not found; run setup.py first!")
@@ -8,9 +8,9 @@ except FileNotFoundError:
 
 # this is for grabbing staticmethods from a class in another file
 # since bot.add_extension won't grab them, you define them like so
-from moderation import Moderation
-from starboard import Starboard
-from utility import Utility
+from cogs.moderation import Moderation
+from cogs.starboard import Starboard
+from cogs.utility import Utility
 membercheck = Moderation.membercheck 
 post_starred = Starboard.post_starred 
 handle_report = Utility.handle_report
@@ -18,15 +18,16 @@ handle_report = Utility.handle_report
 from aiohttp.errors import ClientOSError
 from asyncio import CancelledError
 import asyncio
-import config
+import cogs.config as config
 config.init()
+from cogs.misc import sendembed
 from datetime import datetime
 from discord.ext import commands
 import discord
-from misc import sendembed
 import pickle
 
-startup_extensions = ["moderation", "starboard", "broadcasting", "utility", "memes"]
+# if you change startup_extensions, make sure it stays in alphabetical order for convenience
+startup_extensions = ['cogs.broadcasting', 'cogs.memes', 'cogs.moderation', 'cogs.perms', 'cogs.starboard', 'cogs.utility']
 # NOTE: PREFIX CANNOT BE CHANGED ON THE FLY; RESTART THE BOT IF YOU CHANGE THE PREFIX IN CONFIG.CFG
 bot = commands.Bot(command_prefix=config.cfg["main"]["prefix"])
 server = bot.get_server('214249708711837696')
@@ -108,43 +109,32 @@ async def on_reaction_remove(reaction, user):
 
 @bot.check
 def check(ctx):
-	"""Before running a command, check if the user is a moderator.
-	If that requirement isn't met, do nothing."""
-	author_has_modrole = False
-	for role in ctx.message.author.roles:
-		if role.name == config.cfg["main"]["mod_role"]:
-			author_has_modrole = True
-	# note: because the modrole check is in here, all bot commands will be mod-only
-	if not author_has_modrole:
+	"""Before running a command, do a permissions check.
+	If the user doesn't have the right role for the command, do nothing."""
+	command = ctx.invoked_with
+	try:
+		if config.cfg["main"]["perms"][command] in [x.name for x in ctx.message.author.roles]:
+			return True
 		return False
-	else:
-		return True
+	except KeyError:
+		if config.cfg["main"]["perms"]["global"] in [x.name for x in ctx.message.author.roles]:
+			return True
+		return False
 
 if __name__ == "__main__":
-	while True:
-		try:
-			for extension in startup_extensions:
-				try:
-					bot.load_extension(extension)
-				except Exception as e:
-					exc = '{}: {}'.format(type(e).__name__, e)
-					print('Failed to load extension {}\n{}'.format(extension, exc))
-			tokenobject = open('tokenid.pkl', 'rb')
-			tokenid = pickle.load(tokenobject)
-			tokenobject.close()
-			bot.run(tokenid)
-		except discord.LoginFailure:
-			print("Error: invalid token; run setup.py again, and make sure your token is correct!")
-			break
-		except KeyboardInterrupt:
-			bot.close()
-			print("Logged out at {0} UTC".format(datetime.utcnow()))
-			break
-		except RuntimeError:
-			bot.close()
-			break
-		except Exception as e:
-			pass
-		# and this bit of code restarts the bot
-		finally:
-			bot.close()
+	try:
+		for extension in startup_extensions:
+			try:
+				bot.load_extension(extension)
+			except Exception as e:
+				exc = '{}: {}'.format(type(e).__name__, e)
+				print('Failed to load extension {}\n{}'.format(extension, exc))
+		tokenobject = open('misc/tokenid.pkl', 'rb')
+		tokenid = pickle.load(tokenobject)
+		tokenobject.close()
+		bot.run(tokenid)
+	except discord.LoginFailure:
+		print("Error: invalid token; run setup.py again, and make sure your token is correct!")
+	except KeyboardInterrupt:
+		bot.close()
+		print("Logged out at {0} UTC".format(datetime.utcnow()))
