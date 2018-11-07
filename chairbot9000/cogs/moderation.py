@@ -27,7 +27,7 @@ class Moderation():
 		if len(channels) != 0:
 			thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
 			overwrite = discord.PermissionOverwrite()
-			async for channel in channels:
+			for channel in channels:
 				# casino_and_botspam
 				if channel.id == '356816009778167809':
 					overwrite.send_messages = True
@@ -36,7 +36,7 @@ class Moderation():
 					overwrite.add_reactions = False
 				await self.bot.edit_channel_permissions(channel, thonks, overwrite)
 				content = 'Due to excessive chat activity, this text channel has been temporarily closed for all users.\n\nPlease wait for an admin to address the situation, and do not DM any staff in the meantime.'
-				await sendembed(self.bot, channel=message.channel, color=discord.Colour.dark_red(),
+				await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 								title='🚫 Raid/spam protection has shut this channel down', content=content)
 				pickle.dump(channel, channels_file)
 		else:
@@ -60,7 +60,7 @@ class Moderation():
 		try:
 			filedir = os.path.dirname(__file__)
 			filedir = os.path.join(filedir, "../misc/channels_shutdown.pkl")
-			channels_file = open(filedir, 'wb')
+			channels_file = open(filedir, 'r+b')
 		except FileNotFoundError:
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="No Channels Shutdown", content="It doesn't seem like any channels were ever shut down.")
@@ -68,7 +68,7 @@ class Moderation():
 		if len(channels) != 0:
 			thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
 			overwrite = discord.PermissionOverwrite()
-			async for channel in channels:
+			for channel in channels:
 				overwrite.send_messages = True
 				overwrite.add_reactions = True
 				await self.bot.edit_channel_permissions(channel, thonks, overwrite)
@@ -88,11 +88,18 @@ class Moderation():
 					await sendembed(self.bot, channel=channel, color=discord.Colour.dark_green(),
 									title='✅ Raid/spam protection has been lifted on this channel', content=content)
 				except EOFError:
-					# end of pickle file, stop restoring now
-					pass
-					
+					channel = ctx.message.channel
+					thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
+					overwrite = discord.PermissionOverwrite()
+					overwrite.send_messages = True
+					overwrite.add_reactions = True
+					await self.bot.edit_channel_permissions(channel, thonks, overwrite)
+					content = 'The situation has been handled and this channel has been reopened.\n\nPlease do not spam messages asking what happened -- refer to the information in #announcements.'
+					await sendembed(self.bot, channel=channel, color=discord.Colour.dark_green(),
+									title='✅ Raid/spam protection has been lifted on this channel', content=content)
+				break
 		channels_file.close()
-		remove('../misc/channels_shutdown.pkl') # remove the file to tie up any loose ends
+		remove(filedir) # remove the file to tie up any loose ends
 	@commands.command(pass_context=True, description="Purge a certain amount of messages from a channel.")
 	async def purge(self, ctx, amount: int):
 		amount += 1
