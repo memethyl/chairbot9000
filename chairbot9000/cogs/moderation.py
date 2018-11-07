@@ -5,6 +5,7 @@ import discord
 from math import floor
 from .misc import sendembed
 from os import remove
+import os
 import pickle
 import re
 
@@ -13,10 +14,16 @@ class Moderation():
 		self.bot = bot
 	@commands.command(pass_context=True, description="Shuts down one or more channels to prevent thonks from typing in them.")
 	async def shutdown(self, ctx, *channels: discord.Channel):
-		"""Shuts down one or more channels, preventing thonks from talking in them."""
 		# affected channels get pickled into a file, 
 		# so that &restore can automatically restore whichever channel(s) you shut down
-		channels_file = open('../misc/channels_shutdown.pkl', 'wb')
+		try:
+			filedir = os.path.dirname(__file__)
+			filedir = os.path.join(filedir, "../misc/channels_shutdown.pkl")
+			channels_file = open(filedir, 'wb')
+		except FileNotFoundError:
+			filedir = os.path.dirname(__file__)
+			filedir = os.path.join(filedir, "../misc/channels_shutdown.pkl")
+			channels_file = open(filedir, 'x+b')
 		if len(channels) != 0:
 			thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
 			overwrite = discord.PermissionOverwrite()
@@ -50,10 +57,13 @@ class Moderation():
 		channels_file.close()
 	@commands.command(pass_context=True, description="Restores any channels that were shut down, allowing thonks to type in them again.")
 	async def restore(self, ctx, *channels: discord.Channel):
-		"""Restores any channels that were shut down before, allowing thonks to talk in them again."""
 		try:
-			channels_file = open('../misc/channels_shutdown.pkl', 'rb')
+			filedir = os.path.dirname(__file__)
+			filedir = os.path.join(filedir, "../misc/channels_shutdown.pkl")
+			channels_file = open(filedir, 'wb')
 		except FileNotFoundError:
+			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
+							title="No Channels Shutdown", content="It doesn't seem like any channels were ever shut down.")
 			return
 		if len(channels) != 0:
 			thonks = discord.utils.get(ctx.message.author.server.roles, name='thonks')
@@ -83,16 +93,14 @@ class Moderation():
 					
 		channels_file.close()
 		remove('../misc/channels_shutdown.pkl') # remove the file to tie up any loose ends
-	@commands.command(pass_context=True, description="Purge a number of messages from a channel.")
+	@commands.command(pass_context=True, description="Purge a certain amount of messages from a channel.")
 	async def purge(self, ctx, amount: int):
-		"""Purge a certain amount of messages from a channel."""
 		amount += 1
 		async for message in self.bot.logs_from(ctx.message.channel, amount):
 			await self.bot.delete_message(message)
 			await sleep(0.5) # ratelimit shit idk
 	@commands.command(pass_context=True, description="Permanently mute one or more users.")
 	async def pmute(self, ctx, *users: discord.Member):
-		"""Permanently mute one or more users."""
 		muterole = discord.utils.get(ctx.message.author.server.roles, name='Muted')
 		for user in users:
 			await self.bot.add_roles(user, muterole)
@@ -108,9 +116,8 @@ class Moderation():
 			content = "Correct syntax: &pmute @user1 [@user2] [...]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
-	@commands.command(pass_context=True, description="Ban multiple IDs at once.")
+	@commands.command(pass_context=True, description="Ban multiple IDs at once. Do NOT ping users in this command.")
 	async def multiban(self, ctx, *users: str):
-		"""Ban multiple IDs at once. Do NOT ping users in this command."""
 		content = "Please provide a ban reason. (for no ban reason, reply \"none\"; to abort, reply \"abort\")"
 		await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.gold(),
 						title="Optional Ban Reason", content=content)
