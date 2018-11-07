@@ -19,7 +19,6 @@ class Starboard():
 							title="Invalid command syntax", content=content)
 	@starboard.command(pass_context=True, description="Set the channel that starboard messages should be posted in.")
 	async def set(self, ctx, channel: discord.Channel):
-		"""Subcommand of starboard that sets the channel starboard messages should be posted in."""
 		if channel:
 			config.cfg["starboard"]["star_channel"] = channel.id
 			config.UpdateConfig.save_config(config.cfg)
@@ -30,9 +29,8 @@ class Starboard():
 			content = "Correct syntax: `&starboard set [channel]"
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
 							title="Invalid command syntax", content=content)
-	@starboard.command(pass_context=True, description="Set the number of stars required for a post to go on the board.")
+	@starboard.command(pass_context=True, description="Set the number of stars required for a post to go on the board. (0 to remove)")
 	async def num(self, ctx, channel: discord.Channel, amount: int):
-		"""Subcommand of starboard that sets the number of stars a post needs to make it on the board. (0 to remove)"""
 		if amount == 0:
 			try:
 				del config.cfg["starboard"]["star_amounts"][channel.name]
@@ -104,7 +102,6 @@ class Starboard():
 				await asyncio.sleep(1)
 	@commands.command(pass_context=True, description="Set whether or not moderators can override the star requirement.\n(to set the mod role, see &modset)")
 	async def modstar(self, ctx, value: str):
-		"""Sets whether or not moderators are able to override the star amount requirement."""
 		if value.lower() == 'true' or value.lower() == 'false':
 			config.cfg["starboard"]["role_override"] = value.lower()
 			config.UpdateConfig.save_config(config.cfg)

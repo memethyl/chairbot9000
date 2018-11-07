@@ -6,9 +6,8 @@ from .misc import sendembed
 class Broadcasting():
 	def __init__(self, bot):
 		self.bot = bot
-	@commands.command(pass_context=True, description="Kick one or more users from the broadcast voice channel.")
+	@commands.command(pass_context=True, description="Kicks one or more users from the broadcast voice channel.")
 	async def bkick(self, ctx, *users: discord.Member):
-		"""Kicks one or more users from the broadcast voice channel."""
 		try:
 			kickchan = await self.bot.create_channel(ctx.message.server, 'Kicking...', type=discord.ChannelType.voice)
 		except:
@@ -79,7 +78,7 @@ class Broadcasting():
 		thonks_perm.connect = True
 		thonks_perm.speak = False
 		await self.bot.edit_channel_permissions(voicechan, thonks, thonks_perm)
-	@broadcast.command(pass_context=True, description="End a broadcast.")
+	@broadcast.command(pass_context=True, description="End a broadcast.", aliases=["stop"])
 	async def end(self, ctx):
 		"""Announces that the broadcast has ended, and kicks all users out of the broadcast voice channel."""
 		voicechan = discord.utils.get(ctx.message.server.channels, id=config.cfg["broadcasting"]["broadcast_vc"])
@@ -106,10 +105,6 @@ class Broadcasting():
 		for item in vc_perms:
 			if type(item[0]) is discord.Member:
 				await self.bot.delete_channel_permissions(voicechan, item[0])
-	@broadcast.command(pass_context=True, description="Alias for &broadcast end.")
-	async def stop(self, ctx):
-		"""(alias for &broadcast end)"""
-		self.end(ctx)
 
 def setup(bot):
 	bot.add_cog(Broadcasting(bot))

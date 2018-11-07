@@ -25,7 +25,6 @@ class Utility():
 		await bot.delete_message(reaction.message)
 	@commands.command(pass_context=True, description="Set the mod role BY NAME for future permissions checks.\nNOTE: THIS MEANS ROLE MENTIONS WON'T WORK HERE")
 	async def modset(self, ctx, rolename: str):
-		"""Set the moderator role BY NAME for future permissions checks."""
 		if discord.utils.get(ctx.message.server.roles, name=rolename) is None:
 			content = "Error: couldn't find role {0} in the server's roles!".format(rolename)
 			await sendembed(self.bot, channel=ctx.message.channel, color=discord.Colour.dark_red(),
@@ -38,7 +37,6 @@ class Utility():
 							title="Mod Role Set", content=content)
 	@commands.command(pass_context=True, description="Send a DM containing the bot's current config.")
 	async def settings(self, ctx):
-		"""Sends a DM containing the bot's current config."""
 		config_str = json.dumps(config.cfg, indent=4, sort_keys=True, ensure_ascii=False)
 		# if the config is too big for one message,
 		if len(config_str) > 1988: # (excluding the leading ```json\n and ending \n``` bits)
