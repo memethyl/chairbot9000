@@ -15,8 +15,6 @@ membercheck = Moderation.membercheck
 post_starred = Starboard.post_starred 
 handle_report = Utility.handle_report
 
-from aiohttp.errors import ClientOSError
-from asyncio import CancelledError
 import asyncio
 import cogs.config as config
 config.init()
@@ -25,44 +23,53 @@ from datetime import datetime
 from discord.ext import commands
 import discord
 import pickle
+import sys, traceback
 
 # if you change startup_extensions, make sure it stays in alphabetical order for convenience
-startup_extensions = ['cogs.broadcasting', 'cogs.memes', 'cogs.moderation', 'cogs.perms', 'cogs.starboard', 'cogs.utility']
+startup_extensions = ['cogs.memes', 'cogs.moderation', 'cogs.perms', 'cogs.starboard', 'cogs.utility']
 # NOTE: PREFIX CANNOT BE CHANGED ON THE FLY; RESTART THE BOT IF YOU CHANGE THE PREFIX IN CONFIG.CFG
 bot = commands.Bot(command_prefix=config.cfg["main"]["prefix"])
-server = bot.get_server('214249708711837696')
 
 # shamelessly stolen from https://gist.github.com/leovoel/46cd89ed6a8f41fd09c5
 @bot.command()
-async def load(extension_name: str):
+async def load(ctx, extension_name: str):
 	"""Loads an extension."""
 	try:
 		bot.load_extension(extension_name)
 	except (AttributeError, ImportError) as e:
-		await bot.say("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
+		await ctx.send("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
 		return
-	await bot.say("{} loaded.".format(extension_name))
+	await ctx.send("{} loaded.".format(extension_name))
 @bot.command()
-async def unload(extension_name: str):
+async def unload(ctx, extension_name: str):
 	"""Unloads an extension."""
 	bot.unload_extension(extension_name)
-	await bot.say("{} unloaded.".format(extension_name))
+	await ctx.send("{} unloaded.".format(extension_name))
 
 @bot.event
 async def on_ready():
-	print('Logged in as')
-	print(bot.user.name)
-	print('at {0} UTC'.format(datetime.utcnow()))
-	print('------')
+	import _version as v
+	startup_info = [
+		"║ chairbot9000 v. {} by memethyl#2461".format(v.__version__),
+		"║ Running as: {}#{}".format(bot.user.name, bot.user.discriminator),
+		"║ Started at: {} ({} UTC)".format(datetime.now().strftime("%B %d, %Y %H:%M:%S"), datetime.utcnow().strftime("%B %d, %Y %H:%M:%S")),
+		"║ Startup cogs: {}".format(', '.join(bot.extensions.keys()))
+	]
+	box_length = max([len(x) for x in startup_info])
+	print("╔"+("═"*box_length)+"╗")
+	for item in startup_info:
+		print(item+(" "*(abs(box_length-len(item))))+" ║")
+	print("╚"+("═"*box_length)+"╝")
+	del startup_info, box_length, v
 
 @bot.event
 async def on_message(message):
 	# add reactions to report
-	if message.author.id == '204255221017214977' and message.channel.id == config.cfg["reporting"]["report_channel"]: 
+	if message.author.id == 204255221017214977 and message.channel.id == config.cfg["reporting"]["report_channel"]:
 							 # YAGPDB.xyz#8760
-		await bot.add_reaction(message, '✅') # action taken
-		await bot.add_reaction(message, '🚫') # no action necessary
-		await bot.add_reaction(message, '⚠') # troll report
+		await message.add_reaction('✅') # action taken
+		await message.add_reaction('🚫') # no action necessary
+		await message.add_reaction('⚠') # troll report
 	else:
 		pass
 	# alright now start processing commands or whatever
@@ -70,42 +77,40 @@ async def on_message(message):
 
 @bot.event
 async def on_member_join(member):
-	await membercheck(bot, config.cfg, member, server)
+	await membercheck(bot, config.cfg, member, member.guild)
 
 @bot.event
-async def on_reaction_add(reaction, user):
-	if reaction.emoji == config.cfg["starboard"]["emoji"]:
-		await post_starred(bot, config.cfg, reaction, user)
-	elif reaction.message.channel.id == config.cfg["reporting"]["report_channel"] and user.bot is False \
-	and reaction.message.author.id == '204255221017214977':
-		await handle_report(bot, reaction, user)
+async def on_raw_reaction_add(payload):
+	channel = bot.get_channel(payload.channel_id)
+	message = await channel.get_message(payload.message_id)
+	user = await bot.get_user_info(payload.user_id)
+	if payload.emoji.name == config.cfg["starboard"]["emoji"]:
+		await post_starred(bot, config.cfg, message, payload.emoji.name, user)
+	elif payload.channel_id == config.cfg["reporting"]["report_channel"] and user.bot is False \
+	and message.author.id == 204255221017214977:
+		await handle_report(bot, message, payload.emoji.name, user)
 	# remove shrugs from pollbot polls
-	elif reaction.emoji == '🤷' and 'poll:' in reaction.message.content:
-		reactors = await bot.get_reaction_users(reaction)
-		for user in reactors:
-			await bot.remove_reaction(reaction.message, reaction.emoji, user)
+	elif payload.emoji.name == '🤷' and 'poll:' in message.content:
+		reactors = [x.users() for x in message.reactions if x.emoji == '🤷'][0]
+		async for user in reactors:
+			await message.remove_reaction(payload.emoji, user)
 	else:
 		pass
 
 @bot.event
-async def on_reaction_remove(reaction, user):
-	if reaction.emoji == config.cfg["starboard"]["emoji"]:
-		reacts = reaction.message.reactions
-		# count the new amount of stars on a post
-		starcount = None
-		for react in reacts:
-			if react.emoji == config.cfg["starboard"]["emoji"]:
-				starlist = await bot.get_reaction_users(react)
-				starcount = len(starlist)
-				break
-		starchan = bot.get_channel(config.cfg["starboard"]["star_channel"])
-		# if the ID of the reaction's message is in the last 50 starboard posts,
-		async for found_message in bot.logs_from(starchan, limit=50):
-			if reaction.message.id in found_message.content:
-				# edit that starboard post with the new number of stars
-				new_content = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + reaction.message.channel.mention + ' ID: ' + reaction.message.id
-				await bot.edit_message(found_message, new_content=new_content)
-				return
+async def on_raw_reaction_remove(payload):
+	channel = bot.get_channel(payload.channel_id)
+	message = await channel.get_message(payload.message_id)
+	user = await bot.get_user_info(payload.user_id)
+	if payload.emoji.name == config.cfg["starboard"]["emoji"] and user != message.author:
+		await post_starred(bot, config.cfg, message, payload.emoji.name, user)
+
+@bot.event
+async def on_command_error(context, exception):
+	if not context.valid:
+		return
+	print('Ignoring exception in command {}'.format(context.invoked_with), file=sys.stderr)
+	traceback.print_exception(type(exception), exception, exception.__traceback__, file=sys.stderr)
 
 @bot.check
 def check(ctx):
@@ -113,11 +118,11 @@ def check(ctx):
 	If the user doesn't have the right role for the command, do nothing."""
 	command = ctx.invoked_with
 	try:
-		if config.cfg["main"]["perms"][command] in [x.name for x in ctx.message.author.roles]:
+		if config.cfg["main"]["perms"][command] in [x.id for x in ctx.author.roles]:
 			return True
 		return False
 	except KeyError:
-		if config.cfg["main"]["perms"]["global"] in [x.name for x in ctx.message.author.roles]:
+		if config.cfg["main"]["perms"]["global"] in [x.id for x in ctx.author.roles]:
 			return True
 		return False
 

@@ -5,3 +5,5 @@
 # Config/log files
 *.cfg
 *.log
+# Small VS Code settings that don't really matter (yet)
+.vscode

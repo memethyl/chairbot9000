@@ -2,7 +2,7 @@
 A rewrite of https://github.com/elatric/mumbot, a specialized bot for Mum's House.
 
 # Dependencies
-- The discord.py library - https://github.com/Rapptz/discord.py
+- The discord.py library (version 1.0.0+) - https://github.com/Rapptz/discord.py/tree/rewrite
 - Python 3.6.x
 
 # Setting up the bot

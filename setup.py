@@ -22,12 +22,12 @@ try:
 {
     "automod": {
         "autoban_mins": 30,
-        "banlog_channel": "305194878139367427",
+        "banlog_channel": 305194878139367427,
         "invite_regex": "((discord\\.gg|discordapp\\.com)\\/(invite\\/|).*)|(.*?(etivni\\/|)\\/(gg\\.drocsid|moc\\.ppadrocsid))"
     },
     "broadcasting": {
-        "announce_channel": "301798483525107712",
-        "broadcast_vc": "329322925641433088"
+        "announce_channel": 301798483525107712,
+        "broadcast_vc": 329322925641433088
     },
     "main": {
         "perms": {
@@ -38,7 +38,7 @@ try:
     "memes": {
     },
     "reporting": {
-        "report_channel": "326122367795593226"
+        "report_channel": 326122367795593226
     },
     "starboard": {
         "emoji": "⭐",
@@ -47,7 +47,7 @@ try:
         "star_amounts": {
             "global": 5
         },
-        "star_channel": "326254078403543041"
+        "star_channel": 326254078403543041
     }
 }
 """
