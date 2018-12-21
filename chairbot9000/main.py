@@ -1,6 +1,10 @@
 try:
-	tokenobject = open('misc/tokenid.pkl', 'rb')
+	import os
+	token_path = os.path.abspath(os.path.dirname(__file__))
+	token_path = os.path.join(token_path, "misc/tokenid.pkl")
+	tokenobject = open(token_path, 'rb')
 	tokenobject.close()
+	del os
 except FileNotFoundError:
 	print("Error: tokenid.pkl not found; run setup.py first!")
 	from sys import exit
@@ -50,16 +54,16 @@ async def unload(ctx, extension_name: str):
 async def on_ready():
 	import _version as v
 	startup_info = [
-		"║ chairbot9000 v. {} by memethyl#2461".format(v.__version__),
-		"║ Running as: {}#{}".format(bot.user.name, bot.user.discriminator),
-		"║ Started at: {} ({} UTC)".format(datetime.now().strftime("%B %d, %Y %H:%M:%S"), datetime.utcnow().strftime("%B %d, %Y %H:%M:%S")),
-		"║ Startup cogs: {}".format(', '.join(bot.extensions.keys()))
+		"chairbot9000 v. {} by memethyl#2461".format(v.__version__),
+		"Running as: {}#{}".format(bot.user.name, bot.user.discriminator),
+		"Started at: {} ({} UTC)".format(datetime.now().strftime("%B %d, %Y %H:%M:%S"), datetime.utcnow().strftime("%B %d, %Y %H:%M:%S")),
+		"Startup cogs: {}".format(', '.join(bot.extensions.keys()))
 	]
 	box_length = max([len(x) for x in startup_info])
-	print("╔"+("═"*box_length)+"╗")
+	print("╔"+("═"*(box_length+2))+"╗")
 	for item in startup_info:
-		print(item+(" "*(abs(box_length-len(item))))+" ║")
-	print("╚"+("═"*box_length)+"╝")
+		print("║ "+item+(" "*(abs(box_length-len(item))))+" ║")
+	print("╚"+("═"*(box_length+2))+"╝")
 	del startup_info, box_length, v
 
 @bot.event
@@ -134,7 +138,7 @@ if __name__ == "__main__":
 			except Exception as e:
 				exc = '{}: {}'.format(type(e).__name__, e)
 				print('Failed to load extension {}\n{}'.format(extension, exc))
-		tokenobject = open('misc/tokenid.pkl', 'rb')
+		tokenobject = open(token_path, 'rb')
 		tokenid = pickle.load(tokenobject)
 		tokenobject.close()
 		bot.run(tokenid)
