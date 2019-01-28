@@ -1,10 +1,10 @@
-from asyncio import sleep
-from . import config
-from discord.ext import commands
+from   asyncio     import sleep
+from   .           import config
+from   discord.ext import commands
 import discord
-from math import floor
-from .misc import sendembed
-from os import remove
+from   math        import floor
+from   .misc       import sendembed
+from   os          import remove
 import os
 import pickle
 import re

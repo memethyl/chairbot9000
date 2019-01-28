@@ -1,7 +1,7 @@
-from . import config
+from   .           import config
 import discord
-from discord.ext import commands
-from .misc import sendembed
+from   discord.ext import commands
+from   .misc       import sendembed
 import os
 
 class Utility():

@@ -1,7 +1,7 @@
-from . import config
+from   .           import config
 import discord
-from discord.ext import commands
-from .misc import sendembed
+from   discord.ext import commands
+from   .misc       import sendembed
 
 class Broadcasting():
 	def __init__(self, bot):

@@ -1,7 +1,7 @@
-from . import config
-from discord.ext import commands
+from   .           import config
+from   discord.ext import commands
 import discord
-from .misc import sendembed
+from   .misc       import sendembed
 
 class Perms():
 	def __init__(self, bot):

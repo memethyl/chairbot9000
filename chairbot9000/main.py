@@ -13,21 +13,21 @@ except FileNotFoundError:
 # this is for grabbing staticmethods from a class in another file
 # since bot.add_extension won't grab them, you define them like so
 from cogs.moderation import Moderation
-from cogs.starboard import Starboard
-from cogs.utility import Utility
+from cogs.starboard  import Starboard
+from cogs.utility    import Utility
 membercheck = Moderation.membercheck 
 post_starred = Starboard.post_starred 
 handle_report = Utility.handle_report
 
 import asyncio
-import cogs.config as config
-config.init()
-from cogs.misc import sendembed
-from datetime import datetime
-from discord.ext import commands
+import cogs.config as     config
+from   cogs.misc   import sendembed
+from   datetime    import datetime
+from   discord.ext import commands
 import discord
 import pickle
 import sys, traceback
+config.init()
 
 # if you change startup_extensions, make sure it stays in alphabetical order for convenience
 startup_extensions = ['cogs.memes', 'cogs.moderation', 'cogs.perms', 'cogs.starboard', 'cogs.utility']

@@ -1,11 +1,13 @@
 import asyncio
-from . import config
+from   .           import config
 import datetime
-from discord.ext import commands
+from   discord.ext import commands
 import discord
 import json
-from .misc import sendembed
+from   .misc       import sendembed
+import os
 import re
+from   typing      import Union
 
 class Starboard():
 	def __init__(self, bot):
@@ -50,6 +52,16 @@ class Starboard():
 			content = "Required amount of stars for {0} set to {1}.".format(channel.mention, str(amount))
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 							title="Star Amount Set", content=content)
+	@starboard.command(description="Blacklist a user from the starboard, preventing any of their posts from making it there.")
+	async def blacklist(self, ctx, user: Union[int, discord.User]): # user can be an ID or a mention
+		if type(user) is int:
+			config.cfg["starboard"]["blacklisted_users"].append(user)
+		else:
+			config.cfg["starboard"]["blacklisted_users"].append(user.id)
+		config.UpdateConfig.save_config(config.cfg)
+		content = "User has been blacklisted from the starboard. Their posts will no longer be posted there."
+		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
+						title="User Blacklisted", content=content)
 	@starboard.command(description="Manually add a post to the starboard. Useful for when chairbot decides to ignore a post")
 	async def addpost(self, ctx, message_chan: str, message_id: int):
 		# extract ID from channel mention before grabbing the message itself
@@ -69,21 +81,23 @@ class Starboard():
 				break
 		else:
 			return
-		# copy-paste powers, activate
-		embed = discord.Embed(color=discord.Colour.gold(), description=message.content)
-		name = message.author.name + "#" + message.author.discriminator
-		starchan = self.bot.get_channel(config.cfg["starboard"]["star_channel"])
-		embed.set_author(name=name, icon_url=message.author.avatar_url)
+		await Starboard.post_to_starboard(self.bot, message, starcount)
+	# this is the function that actually posts stuff to the starboard
+	@staticmethod
+	async def post_to_starboard(bot, message, starcount):
+		# start the actual embed now
+		embed = discord.Embed(color=discord.Colour.gold(), description="[Jump To]("+message.jump_url+")\n\n"+message.content)
+		embed.set_author(name=message.author.name+"#"+message.author.discriminator,
+						 icon_url=message.author.avatar_url)
+		starchan = bot.get_channel(config.cfg["starboard"]["star_channel"])
 		embed.timestamp = datetime.datetime.now()
 		found_embeds = message.attachments
-		# if the message has an image attachment, post that
+		# if the message has an image attachment, use that
 		if len(found_embeds) != 0:
 			for item in found_embeds:
 				try:
 					post_image = item.url
 					embed.set_image(url=post_image)
-					info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-					await starchan.send(info, embed=embed)
 					break
 				except:
 					pass
@@ -91,20 +105,21 @@ class Starboard():
 		else:
 			image_links = re.findall(r"(http(s|):\/\/(.+?)(png|jpg|jpeg|gif|bmp))", message.content, flags=re.I|re.M)
 			for item in image_links:
-				# go through any image links that were found, try to embed them, and post the result
+				# go through any image links that were found, and try to embed them
 				try:
 					embed.set_image(url=item[0])
-					info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-					await starchan.send(info, embed=embed)
 					break
 				except:
 					pass
-			# if none of the image links could be embedded, just post the message content without any image embed
-			# no you're not reading this wrong, for loops DO have else clauses
-			# this only runs if the for loop above never runs "break"
-			else:
-				info = config.cfg["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-				await starchan.send(info, embed=embed)
+		content = config.cfg["starboard"]["emoji"] + " " + str(starcount) + " " + message.channel.mention + " " + "ID: " + str(message.id)
+		async for history_message in starchan.history(limit=config.cfg["starboard"]["repost_history"]):
+			# if the post already exists on the board, edit that post with the updated star count instead of making a new post
+			if str(message.id) in history_message.content:
+				starred_message = await starchan.get_message(history_message.id)
+				await starred_message.edit(content=content, embed=embed)
+				break
+		else:
+			starred_message = await starchan.send(content=content, embed=embed)
 	@commands.command(description="Set whether or not moderators can override the star requirement.\n(to set the mod role, see &modset)")
 	async def modstar(self, ctx, value: str):
 		"""&modstar <true/false>"""
@@ -138,11 +153,12 @@ class Starboard():
 		starlist = None
 		starcount = None
 		starcount_reached = False
-
 		# if the post is older than a week, don't bother putting it on the board
 		if (datetime.datetime.now() - message.created_at).total_seconds() > 604800:
 			return
-
+		# check if the poster of the starred message is blacklisted from the starboard
+		if message.author.id in config["starboard"]["blacklisted_users"]:
+			return
 		# count the number of stars a post has
 		for react in reacts:
 			if react.emoji == config["starboard"]["emoji"]:
@@ -151,7 +167,6 @@ class Starboard():
 				break
 		else:
 			return
-
 		# check if the star count was reached
 		try:
 			# if there's a star requirement for a specific channel, and the starred message is in that channel,
@@ -168,9 +183,8 @@ class Starboard():
 			if Starboard.modcheck(bot, config, reactor) and config["starboard"]["role_override"] == "true":
 				starcount_reached = True
 				break
-
 		# anti-self-star code
-		if message.author.id in [x.id for x in starlist]:
+		if message.author.id == user.id:
 			await message.remove_reaction(reaction_emoji, message.author)
 			# count the number of self-star alerts out of the last 50 messages
 			counter = 0
@@ -183,52 +197,8 @@ class Starboard():
 				selfstar_alert = '🚨 🚨 ' + user.mention + ' IS A THOT AND SELF-STARRED THEIR MEME 🚨 🚨'
 				await message.channel.send(selfstar_alert)
 			return
-
-		# the code that actually posts stuff to the starboard
 		if starcount_reached and message.author.id != bot.user.id:
-			# start posting
-			starchan = bot.get_channel(config["starboard"]["star_channel"])
-			async for found_message in starchan.history(limit=50):
-				# if the ID of the starred message was in any of the last 50 starboard posts,
-				if str(message.id) in found_message.content and found_message.author.id == bot.user.id:
-					# edit the message on the board with the new star count
-					new_content = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-					await found_message.edit(content=new_content)
-					return
-			embed = discord.Embed(color=discord.Colour.gold(), description=message.content)
-			name = message.author.name + '#' + message.author.discriminator
-			embed.set_author(name=name, icon_url=message.author.avatar_url)
-			embed.timestamp = datetime.datetime.now()
-			found_embeds = message.attachments
-			# if the message has an image attachment, post that
-			if len(found_embeds) != 0:
-				for item in found_embeds:
-					post_image = item.url
-					try:
-						embed.set_image(url=post_image)
-						info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-						await starchan.send(info, embed=embed)
-						break
-					except:
-						print("somehow couldn't set post image for starboard message")
-			# otherwise look for image links
-			else:
-				image_links = re.findall(r"(http(s|):\/\/(.+?)(png|jpg|jpeg|gif|bmp))", message.content, flags=re.I|re.M)
-				for item in image_links:
-					# go through any image links that were found, try to embed them, and post the result
-					try:
-						embed.set_image(url=item[0])
-						info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-						await starchan.send(info, embed=embed)
-						break
-					except:
-						pass
-				# if none of the image links could be embedded, just post the message content without any image embed
-				# no you're not reading this wrong, for loops DO have else clauses
-				# this only runs if the for loop above never runs "break"
-				else:
-					info = config["starboard"]["emoji"] + ' ' + str(starcount) + ' ' + message.channel.mention + ' ID: ' + str(message.id)
-					await starchan.send(info, embed=embed)
+			await Starboard.post_to_starboard(bot, message, starcount)
 
 def setup(bot):
 	bot.add_cog(Starboard(bot))
