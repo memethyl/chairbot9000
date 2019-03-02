@@ -4,7 +4,7 @@ from   discord.ext import commands
 from   .misc       import sendembed
 import os
 
-class Utility():
+class Utility(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 	@staticmethod

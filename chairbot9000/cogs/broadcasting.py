@@ -3,7 +3,7 @@ import discord
 from   discord.ext import commands
 from   .misc       import sendembed
 
-class Broadcasting():
+class Broadcasting(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 	@commands.command(description="Kicks one or more users from the broadcast voice channel.")

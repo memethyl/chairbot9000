@@ -9,7 +9,7 @@ import os
 import re
 from   typing      import Union
 
-class Starboard():
+class Starboard(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 	@commands.group()

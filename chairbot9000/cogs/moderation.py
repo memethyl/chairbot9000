@@ -9,7 +9,7 @@ import os
 import pickle
 import re
 
-class Moderation():
+class Moderation(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 	@commands.command(description="Shuts down one or more channels to prevent thonks from typing in them.\nIf arguments are not provided to this command, it will default to the channel it was run in.")
