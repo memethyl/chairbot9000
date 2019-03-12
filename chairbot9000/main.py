@@ -110,6 +110,14 @@ async def on_raw_reaction_remove(payload):
 		await post_starred(bot, config.cfg, message, payload.emoji.name, user)
 
 @bot.event
+async def on_voice_state_update(member, before, after):
+	vc_text = member.guild.get_channel(config.cfg["main"]["vc_text_channel"])
+	if not before.channel and after.channel:
+		await vc_text.set_permissions(member, read_messages=True, send_messages=True, reason="User joined voice channel")
+	elif before.channel and not after.channel:
+		await vc_text.set_permissions(member, overwrite=None, reason="User left voice channel")
+
+@bot.event
 async def on_command_error(context, exception):
 	if not context.valid:
 		return
