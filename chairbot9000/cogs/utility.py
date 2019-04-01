@@ -23,17 +23,32 @@ class Utility(commands.Cog):
 		else:
 			return
 		await message.delete()
+	# shamelessly stolen from https://gist.github.com/leovoel/46cd89ed6a8f41fd09c5
+	@commands.command(description="Loads an extension.")
+	async def load(ctx, extension_name: str):
+		"""&load <extension name, usually cogs.X>"""
+		try:
+			ctx.load_extension(extension_name)
+		except (AttributeError, ImportError) as e:
+			await ctx.send(f"```py\n{type(e).__name__}: {str(e)}\n```")
+			return
+		await ctx.send(f"{extension_name} loaded.")
+	@commands.command(description="Unloads an extension.")
+	async def unload(ctx, extension_name: str):
+		"""&unload <extension name, usually cogs.X>"""
+		ctx.unload_extension(extension_name)
+		await ctx.send(f"{extension_name} unloaded.")
 	@commands.command(description="Set the mod role BY NAME for future permissions checks.\nNOTE: THIS MEANS ROLE MENTIONS WON'T WORK HERE")
 	async def modset(self, ctx, rolename: str):
 		"""&modset <name of desired role>"""
 		if discord.utils.get(ctx.guild.roles, name=rolename) is None:
-			content = "Error: couldn't find role {0} in the server's roles!".format(rolename)
+			content = f"Error: couldn't find role {rolename} in the server's roles!"
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_red(),
 							title="Unable to Set Mod Role", content=content)
 		else:
 			config.cfg["main"]["mod_role"] = rolename
 			config.UpdateConfig.save_config(config.cfg)
-			content = "Mod role set to {0}.".format(rolename)
+			content = f"Mod role set to {rolename}."
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 							title="Mod Role Set", content=content)
 	@commands.command(description="Send a DM containing the bot's current config.")

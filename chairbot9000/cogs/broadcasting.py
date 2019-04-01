@@ -11,7 +11,7 @@ class Broadcasting(commands.Cog):
 		try:
 			kickchan = await ctx.guild.create_voice_channel('Kicking...')
 		except:
-			content = "Couldn't kick {0} from the station; try again later!".format(', '.join([user.mention for user in users]))
+			content = f"Couldn't kick {', '.join([user.mention for user in users])} from the station; try again later!"
 			await sendembed(channel=ctx.guild, color=discord.Colour.dark_red(),
 							title="Failed to Kick", content=content)
 			await kickchan.delete()
@@ -21,9 +21,9 @@ class Broadcasting(commands.Cog):
 		await kickchan.delete()
 
 		if len(users) > 1:
-			content = "Users {0} kicked from the station".format(', '.join([user.mention for user in users]))
+			content = f"Users {', '.join([user.mention for user in users])} kicked from the station"
 		else:
-			content = "User {0} kicked from the station".format(users[0].mention)
+			content = f"User {users[0].mention} kicked from the station"
 		await sendembed(channel=ctx.guild, color=discord.Colour.dark_green(),
 						title="Kicked Successfully", content=content)
 	@commands.group()

@@ -16,9 +16,18 @@ except FileExistsError:
 pickle.dump(token, tokenobject)
 tokenobject.close()
 
+try:
+	memedir = 'chairbot9000/misc/memed_users.pkl'
+	os.makedirs(os.path.dirname(memedir), exist_ok=True)
+	memeobject = open(memedir, "x+b")
+	pickle.dump([], memeobject)
+	memeobject.close()
+except FileExistsError:
+	pass
+
 def config_setup(config):
 	default_config = {
-		"automod": {
+		"moderation": {
 		},
 		"broadcasting": {
 		},
@@ -26,8 +35,6 @@ def config_setup(config):
 			"perms": {
 			},
 			"prefix": "&"
-		},
-		"memes": {
 		},
 		"reporting": {
 		},
@@ -38,8 +45,8 @@ def config_setup(config):
 			}
 		}
 	}
-	default_config["automod"]["autoban_mins"] = int(input("How young should an account be (less than X minutes old) for chairbot9000 to autoban it? "))
-	default_config["automod"]["banlog_channel"] = int(input("Provide the ID (e.g. 123456789012345678) of the text channel you want chairbot to log autobans to. "))
+	default_config["moderation"]["autoban_mins"] = int(input("How young should an account be (less than X minutes old) for chairbot9000 to autoban it? "))
+	default_config["moderation"]["banlog_channel"] = int(input("Provide the ID (e.g. 123456789012345678) of the text channel you want chairbot to log autobans to. "))
 	
 	default_config["broadcasting"]["announce_channel"] = int(input("Provide the ID of the text channel you want chairbot to announce broadcasts in. "))
 	default_config["broadcasting"]["broadcast_vc"] = int(input("Provide the ID of the voice channel you want to do broadcasts in. "))
@@ -48,7 +55,7 @@ def config_setup(config):
 		if prefix:
 			default_config["main"]["prefix"] = prefix
 	default_config["main"]["perms"]["global"] = input("Provide the NAME of the minimum role required to use ANY chairbot command. ")
-	print("Note: If you want to require higher roles for certain commands, run `{}help perms set` once the bot is online.".format(default_config["main"]["prefix"]))
+	print(f"Note: If you want to require higher roles for certain commands, run `{default_config["main"]["prefix"])}help perms set` once the bot is online."
 
 	default_config["reporting"]["report_channel"] = int(input("NOTE: IN ORDER FOR REPORTING TO WORK, THE \"YAGPDB\" BOT (https://yagpdb.xyz/) MUST BE USED; THIS MAY CHANGE IN A LATER UPDATE\nProvide the ID of the text channel you want YAGPDB reports to be sent to and handled in. "))
 	
@@ -67,7 +74,7 @@ def config_setup(config):
 		if repost_history:
 			default_config["starboard"]["repost_history"] = int(repost_history)
 	default_config["starboard"]["star_amounts"]["global"] = int(input("Please enter the default number of reactions required to put a message on the starboard. "))
-	print("If you want certain channels to require more reactions than others, run `{}help starboard num` once the bot is online.".format(default_config["main"]["prefix"]))
+	print(f"If you want certain channels to require more reactions than others, run `{default_config["main"]["prefix"]}help starboard num` once the bot is online."
 	default_config["starboard"]["star_channel"] = int(input("Please enter the ID of the channel you want to use as the starboard. "))
 	
 	config.write(default_config)

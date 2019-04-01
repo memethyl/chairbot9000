@@ -8,6 +8,7 @@ from   os          import remove
 import os
 import pickle
 import re
+import time
 
 class Moderation(commands.Cog):
 	def __init__(self, bot):
@@ -109,7 +110,7 @@ class Moderation(commands.Cog):
 		amount += 1
 		for i in range((amount+1)%101, amount+2, 100):
 			await ctx.channel.delete_messages([x async for x in ctx.channel.history(limit=(i-1)%101)])
-		await ctx.channel.send("Deleted {} messages.".format(amount-1))
+		await ctx.channel.send(f"Deleted {amount-1} messages.")
 	@commands.command(description="Permanently mute one or more users.")
 	async def pmute(self, ctx, *users: discord.Member):
 		"""&pmute <user mention> [more user mentions]"""
@@ -158,12 +159,74 @@ class Moderation(commands.Cog):
 			if len(successful_bans) == 0:
 				content = "No users successfully banned"
 			else:
-				content = "Successfully banned users {0}".format(' '.join([str(x) for x in users if x not in failed_bans]))
+				content = f"Successfully banned users {' '.join([str(x) for x in users if x not in failed_bans])}"
 				if len(failed_bans) > 0:
-					content += "\nFailed to ban users {0}".format(' '.join([str(x) for x in failed_bans]))
+					content += f"\nFailed to ban users {' '.join([str(x) for x in failed_bans])}"
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
-							title="{0} Successful Bans, {1} Failed Bans".format(len(successful_bans), len(failed_bans)),
+							title=f"{len(successful_bans)} Successful Bans, {len(failed_bans)} Failed Bans",
 							content=content)
+	@commands.command(description="Ban a user from the meme channel (specified in config.cfg) for a certain amount of time. Defaults to 24 hours if no time is given.")
+	async def meme(self, ctx, user: discord.User, _time: str="24h"):
+		"""&meme <user mention> <time, formatted like 1w3d6h56m, 12h, etc>"""
+		_time = re.findall(r"(\d+)([wdhm])", _time)
+		_time = [(int(x), y) for (x,y) in _time]
+		mins = 0
+		for amt in _time:
+			if amt[1] is 'm':
+				mins += amt[0]
+			elif amt[1] is 'h':
+				mins += amt[0]*60
+			elif amt[1] is 'd':
+				mins += amt[0]*60*24
+			elif amt[1] is 'w':
+				mins += amt[0]*60*24*7
+			else:
+				pass
+		meme_channel = discord.utils.get(self.bot.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
+		await meme_channel.set_permissions(user, read_messages=False, reason="Posted rule-breaking or meta meme in the meme channel")
+		try:
+			await user.send(f"You have been banned from {meme_channel.mention} for posting a rule-breaking or meta meme. You may return to the channel in {mins} minutes.")
+		except discord.errors.Forbidden:
+			pass
+		filedir = os.path.dirname(__file__)
+		filedir = os.path.join(filedir, "../misc/memed_users.pkl")
+		f = open(filedir, "r+b")
+		try:
+			memed_users = pickle.load(f)
+		except EOFError:
+			memed_users = []
+		f.truncate(0)
+		f.seek(0)
+		memed_users.append([user.id, int(time.time()/60 + mins)])
+		pickle.dump(memed_users, f)
+		f.close()
+		content = f"User {user.mention} has been banned from {meme_channel.mention} for {mins} minutes."
+		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
+						title="User Memed", content=content)
+	@commands.command(description="Unban a user from the meme channel (specified in config.cfg).")
+	async def unmeme(self, ctx, user: discord.User):
+		"""&unmeme <user mention>"""
+		meme_channel = discord.utils.get(self.bot.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
+		await meme_channel.set_permissions(user, overwrite=None, reason="Unbanning user from the meme channel")
+		try:
+			await user.send(f"You have been unbanned from {meme_channel.mention}.")
+		except discord.errors.Forbidden:
+			pass
+		filedir = os.path.dirname(__file__)
+		filedir = os.path.join(filedir, "../misc/memed_users.pkl")
+		f = open(filedir, "r+b")
+		try:
+			memed_users = pickle.load(f)
+		except EOFError:
+			memed_users = []
+		f.truncate(0)
+		f.seek(0)
+		memed_users = [x for x in memed_users if x[0] != user.id]
+		pickle.dump(memed_users, f)
+		f.close()
+		content = f"User {user.mention} has been unbanned from {meme_channel.mention}."
+		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
+						title="User Unmemed", content=content)
 	@staticmethod
 	async def membercheck(bot, config, member, server):
 		"""Check the difference between a member's account creation time and their join time.
@@ -173,27 +236,30 @@ class Moderation(commands.Cog):
 		creation_time = member.created_at
 		delta = join_time - creation_time
 		delta = delta.total_seconds()
-		if delta/60 <= config["automod"]["autoban_mins"]:
+		if delta/60 <= config["moderation"]["autoban_mins"]:
 			await server.ban(member)
 			hours = floor(delta/3600)
 			minutes = floor((delta/60)%60)
 			seconds = delta - (hours*3600) - (minutes*60)
-			if config["automod"]["autoban_mins"] >= 60:
-				deltastr = "{0} hours {1} minutes {2} seconds".format(hours, minutes, seconds)
+			if config["moderation"]["autoban_mins"] >= 60:
+				deltastr = f"{hours} hours {minutes} minutes {seconds} seconds"
 			else:
-				deltastr = "{0} minutes {1} seconds".format(minutes, seconds)
-			content = "Banned {0} for being a new account\nAccount created at: {1}\nAccount joined at: {2}\nDelta: {3}".format(\
-						member.mention, creation_time.strftime("%Y-%m-%d %H:%M:%S"), join_time.strftime("%Y-%m-%d %H:%M:%S"), \
-						deltastr)
-			channel = bot.get_channel(config["automod"]["banlog_channel"])
+				deltastr = f"{minutes} minutes {seconds} seconds"
+			content = (
+						f"Banned {member.mention} for being a new account\n"
+						f"Account created at: {creation_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+						f"Account joined at: {join_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+						f"Delta: {deltastr}"
+					  )
+			channel = bot.get_channel(config["moderation"]["banlog_channel"])
 			await sendembed(channel=channel, color=discord.Colour.gold(),
 							title="⚠️ Newly Created Account Banned", content=content)
 		# invite bots :ree:
-		invite_regex = config["automod"]["invite_regex"]
+		invite_regex = config["moderation"]["invite_regex"]
 		if re.search(invite_regex, str(member.name)) or re.search(invite_regex, str(member.nick)):
 			await server.ban(member)
-			content = "Banned {0} for being a fucking invite bot".format(member.mention)
-			channel = bot.get_channel(config["automod"]["banlog_channel"])
+			content = f"Banned {member.mention} for being an invite bot"
+			channel = bot.get_channel(config["moderation"]["banlog_channel"])
 			await sendembed(channel=channel, color=discord.Colour.gold(),
 							title="⚠️ Invite Bot Banned ⚠️", content=content)
 

@@ -25,7 +25,7 @@ class Starboard(commands.Cog):
 		if channel:
 			config.cfg["starboard"]["star_channel"] = channel.id
 			config.UpdateConfig.save_config(config.cfg)
-			content = "Starboard channel set to {0}.".format(channel.mention)
+			content = f"Starboard channel set to {channel.mention}."
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 							title="Starboard Channel Set", content=content)
 		else:
@@ -39,17 +39,17 @@ class Starboard(commands.Cog):
 			try:
 				del config.cfg["starboard"]["star_amounts"][channel.name]
 				config.UpdateConfig.save_config(config.cfg)
-				content = "Removed amount of stars for {0}; channel now defaults to {1}.".format(channel.mention, config.cfg["starboard"]["star_amounts"]["global"])
+				content = f"Removed amount of stars for {channel.mention}; channel now defaults to {config.cfg['starboard']['star_amounts']['global']}."
 				await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 								title="Removed Star Amount", content=content)
 			except KeyError:
-				content = "Error: {0} doesn't have a custom star amount!".format(channel.mention)
+				content = f"Error: {channel.mention} doesn't have a custom star amount!"
 				await sendembed(channel=ctx.channel, color=discord.Colour.dark_red(),
 								title="Invalid command", content=content)
 		else:
 			config.cfg["starboard"]["star_amounts"][channel.name] = amount
 			config.UpdateConfig.save_config(config.cfg)
-			content = "Required amount of stars for {0} set to {1}.".format(channel.mention, str(amount))
+			content = f"Required amount of stars for {channel.mention} set to {str(amount)}."
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 							title="Star Amount Set", content=content)
 	@starboard.command(description="Blacklist a user from the starboard, preventing any of their posts from making it there.")
@@ -69,7 +69,7 @@ class Starboard(commands.Cog):
 		try:
 			message = await message_chan.get_message(message_id)
 		except discord.errors.NotFound:
-			await ctx.channel.send("Message ID {0} was not found in {1}!".format(message_id, message_chan.mention))
+			await ctx.channel.send(f"Message ID {message_id} was not found in {message_chan.mention}!")
 			return
 		# get star count on the post
 		reacts = message.reactions
@@ -126,7 +126,7 @@ class Starboard(commands.Cog):
 		if value.lower() == 'true' or value.lower() == 'false':
 			config.cfg["starboard"]["role_override"] = value.lower()
 			config.UpdateConfig.save_config(config.cfg)
-			content = "Mod star override set to {0}.".format(value.lower())
+			content = f"Mod star override set to {value.lower()}."
 			color = discord.Colour.dark_green() if value.lower() == 'true' else discord.Colour.dark_red()
 			await sendembed(channel=ctx.channel, color=color,
 							title="Mod Star Override Set", content=content)
