@@ -1,14 +1,15 @@
 from   asyncio     import sleep
 from   .           import config
+import datetime
 from   discord.ext import commands
 import discord
 from   math        import floor
 from   .misc       import sendembed
 from   os          import remove
 import os
-import pickle
+import pickle # todo: replace pickling in &shutdown and &restore with sqlite3
 import re
-import time
+import sqlite3
 
 class Moderation(commands.Cog):
 	def __init__(self, bot):
@@ -105,12 +106,23 @@ class Moderation(commands.Cog):
 			channels_file.close()
 			remove(filedir) # remove the file to tie up any loose ends
 	@commands.command(description="Purge a certain amount of messages from a channel.")
-	async def purge(self, ctx, amount: int):
-		"""&purge <number of messages to delete>"""
+	async def purge(self, ctx, amount: int, first_message: int=None):
+		"""&purge <number of messages to delete> [ID of the first message to delete]"""
+		if first_message:
+			first_message = await ctx.channel.fetch_message(first_message)
+			first_message = await ctx.channel.history(limit=1, before=first_message).flatten()
+			first_message = first_message[0]
 		amount += 1
-		for i in range((amount+1)%101, amount+2, 100):
-			await ctx.channel.delete_messages([x async for x in ctx.channel.history(limit=(i-1)%101)])
-		await ctx.channel.send(f"Deleted {amount-1} messages.")
+		try:
+			for i in range((amount+1)%101, amount+2, 100):
+				await ctx.channel.delete_messages([x async for x in ctx.channel.history(limit=(i-1)%101, after=first_message)])
+			await ctx.channel.send(f"Deleted {amount-1} messages.")
+		except discord.errors.HTTPException:
+			warning = await ctx.channel.send("Warning: bulk deletion failed; this may take a while. Also, expect lots of messages in the mod logs.")
+			messages = [x async for x in ctx.channel.history(limit=amount, after=first_message, before=warning)]
+			for message in messages:
+				await message.delete()
+			await warning.edit(content=f"Deleted {amount-1} messages.")
 	@commands.command(description="Permanently mute one or more users.")
 	async def pmute(self, ctx, *users: discord.Member):
 		"""&pmute <user mention> [more user mentions]"""
@@ -151,7 +163,7 @@ class Moderation(commands.Cog):
 			successful_bans = []
 			for user in users:
 				try:
-					user_object = await self.bot.get_user_info(user)
+					user_object = await self.bot.fetch_user(user)
 					await ctx.guild.ban(user_object, reason=reason.content)
 					successful_bans.append(user)
 				except discord.errors.NotFound:
@@ -183,23 +195,17 @@ class Moderation(commands.Cog):
 			else:
 				pass
 		meme_channel = discord.utils.get(self.bot.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
-		await meme_channel.set_permissions(user, read_messages=False, reason="Posted rule-breaking or meta meme in the meme channel")
+		await meme_channel.set_permissions(user, read_messages=False, reason="Posted rule-breaking meme in the meme channel")
 		try:
-			await user.send(f"You have been banned from {meme_channel.mention} for posting a rule-breaking or meta meme. You may return to the channel in {mins} minutes.")
+			await user.send(f"You have been banned from {meme_channel.mention} for posting a rule-breaking meme. You may return to the channel in {mins} minutes.")
 		except discord.errors.Forbidden:
 			pass
 		filedir = os.path.dirname(__file__)
-		filedir = os.path.join(filedir, "../misc/memed_users.pkl")
-		f = open(filedir, "r+b")
-		try:
-			memed_users = pickle.load(f)
-		except EOFError:
-			memed_users = []
-		f.truncate(0)
-		f.seek(0)
-		memed_users.append([user.id, int(time.time()/60 + mins)])
-		pickle.dump(memed_users, f)
-		f.close()
+		filedir = os.path.join(filedir, "../misc/memed_users.db")
+		conn = sqlite3.connect(filedir)
+		c = conn.cursor()
+		c.execute("INSERT INTO memed_users VALUES (?,?)", (user.id, datetime.datetime.now() + datetime.timedelta(0, mins)))
+		conn.close()
 		content = f"User {user.mention} has been banned from {meme_channel.mention} for {mins} minutes."
 		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 						title="User Memed", content=content)
@@ -214,16 +220,10 @@ class Moderation(commands.Cog):
 			pass
 		filedir = os.path.dirname(__file__)
 		filedir = os.path.join(filedir, "../misc/memed_users.pkl")
-		f = open(filedir, "r+b")
-		try:
-			memed_users = pickle.load(f)
-		except EOFError:
-			memed_users = []
-		f.truncate(0)
-		f.seek(0)
-		memed_users = [x for x in memed_users if x[0] != user.id]
-		pickle.dump(memed_users, f)
-		f.close()
+		conn = sqlite3.connect(filedir)
+		c = conn.cursor()
+		c.execute("DELETE FROM memed_users WHERE user_id=?", user.id)
+		conn.close()
 		content = f"User {user.mention} has been unbanned from {meme_channel.mention}."
 		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 						title="User Unmemed", content=content)

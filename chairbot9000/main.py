@@ -27,6 +27,7 @@ from   discord.ext import commands
 import discord
 import os
 import pickle
+import sqlite3
 import sys
 import time
 import traceback
@@ -39,6 +40,7 @@ class Chairbot9000(commands.Bot):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.add_check(self.perms_check)
+		self.help_command = commands.DefaultHelpCommand(command_attrs={"aliases": ["h"]})
 		for extension in startup_extensions:
 			try:
 				self.load_extension(extension)
@@ -79,8 +81,8 @@ class Chairbot9000(commands.Bot):
 
 	async def on_raw_reaction_add(self, payload):
 		channel = self.get_channel(payload.channel_id)
-		message = await channel.get_message(payload.message_id)
-		user = await self.get_user_info(payload.user_id)
+		message = await channel.fetch_message(payload.message_id)
+		user = await self.fetch_user(payload.user_id)
 		if payload.emoji.name == config.cfg["starboard"]["emoji"]:
 			await post_starred(bot, config.cfg, message, payload.emoji.name, user)
 		elif payload.channel_id == config.cfg["reporting"]["report_channel"] and user.bot is False \
@@ -96,8 +98,8 @@ class Chairbot9000(commands.Bot):
 
 	async def on_raw_reaction_remove(self, payload):
 		channel = self.get_channel(payload.channel_id)
-		message = await channel.get_message(payload.message_id)
-		user = await self.get_user_info(payload.user_id)
+		message = await channel.fetch_message(payload.message_id)
+		user = await self.fetch_user(payload.user_id)
 		if payload.emoji.name == config.cfg["starboard"]["emoji"] and user != message.author:
 			await post_starred(bot, config.cfg, message, payload.emoji.name, user)
 
@@ -128,29 +130,22 @@ class Chairbot9000(commands.Bot):
 			return False
 	
 	async def check_memed_users(self):
-		await asyncio.sleep(2) # await self.wait_until_ready() is bugged
+		await self.wait_until_ready()
 		while not self.is_closed():
 			meme_channel = discord.utils.get(self.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
 			filedir = os.path.dirname(__file__)
-			filedir = os.path.join(filedir, "misc/memed_users.pkl")
-			f = open(filedir, "r+b")
-			try:
-				memed_users = pickle.load(f)
-				f.truncate(0)
-				f.seek(0)
-				if memed_users == []:
-					pickle.dump([], f)
-				else:
-					for user in memed_users[:]:
-						if int(time.time()/60) > user[1]:
-							await meme_channel.set_permissions(self.get_user(user[0]), overwrite=None, reason="Unbanning user from the meme channel")
-							memed_users.remove(user)
-					pickle.dump(memed_users, f)
-			except EOFError:
-				pickle.dump([], f)
-			except:
-				pickle.dump(memed_users, f)
-			f.close()
+			filedir = os.path.join(filedir, "misc/memed_users.db")
+			conn = sqlite3.connect(filedir)
+			c = conn.cursor()
+			c.execute("SELECT * FROM memed_users")
+			memed_users = c.fetchall()
+			if memed_users != []:
+				for user in memed_users[:]:
+					if time.time() >= time.mktime(time.strptime(user[1], '%Y-%m-%d %H:%M:%S.%f')):
+						await meme_channel.set_permissions(self.get_user(user[0]), overwrite=None, reason="Unbanning user from the meme channel")
+						c.execute("DELETE FROM memed_users WHERE user_id=?", user[0])
+						memed_users.remove(user)
+			conn.close()
 			await asyncio.sleep(120) # once per minute seemed a little too frequent so i chose two minutes instead
 
 bot = Chairbot9000(command_prefix=config.cfg["main"]["prefix"])

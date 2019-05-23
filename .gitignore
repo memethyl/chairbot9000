@@ -2,6 +2,8 @@
 *.py[cod]
 # Files containing pickled Python objects
 *.pkl
+# Database files
+*.db
 # Config/log files
 *.cfg
 *.log

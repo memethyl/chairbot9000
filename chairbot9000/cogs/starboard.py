@@ -67,7 +67,7 @@ class Starboard(commands.Cog):
 		# extract ID from channel mention before grabbing the message itself
 		message_chan = ctx.guild.get_channel(int(re.findall(r"<#(\d+)>", message_chan)[0]))
 		try:
-			message = await message_chan.get_message(message_id)
+			message = await message_chan.fetch_message(message_id)
 		except discord.errors.NotFound:
 			await ctx.channel.send(f"Message ID {message_id} was not found in {message_chan.mention}!")
 			return
@@ -115,7 +115,7 @@ class Starboard(commands.Cog):
 		async for history_message in starchan.history(limit=config.cfg["starboard"]["repost_history"]):
 			# if the post already exists on the board, edit that post with the updated star count instead of making a new post
 			if str(message.id) in history_message.content:
-				starred_message = await starchan.get_message(history_message.id)
+				starred_message = await starchan.fetch_message(history_message.id)
 				await starred_message.edit(content=content, embed=embed)
 				break
 		else:
