@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import pickle
+import sqlite3
 
 # set up bot token
 token = input("Insert bot token to continue: ")
@@ -16,14 +17,14 @@ except FileExistsError:
 pickle.dump(token, tokenobject)
 tokenobject.close()
 
-try:
-	memedir = 'chairbot9000/misc/memed_users.pkl'
-	os.makedirs(os.path.dirname(memedir), exist_ok=True)
-	memeobject = open(memedir, "x+b")
-	pickle.dump([], memeobject)
-	memeobject.close()
-except FileExistsError:
-	pass
+memedir = 'chairbot9000/misc/memed_users.db'
+os.makedirs(os.path.dirname(memedir), exist_ok=True)
+conn = sqlite3.connect(memedir)
+c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS memed_users 
+			 (user_id integer, expiration timestamp)''')
+conn.commit()
+conn.close()
 
 def config_setup(config):
 	default_config = {

@@ -67,7 +67,7 @@ class Moderation(commands.Cog):
 			for channel in [ctx.guild.get_channel(int(re.findall(r"<#(\d+)>", x)[0])) for x in channels]:
 				overwrite.send_messages = True
 				overwrite.add_reactions = True
-				await ctx.channel.set_permissions(thonks, overwrite=overwrite)
+				await channel.set_permissions(thonks, overwrite=overwrite)
 				content = 'The situation has been handled and this channel has been reopened.\n\nPlease do not spam messages asking what happened -- refer to the information in #announcements.'
 				await sendembed(channel=channel, color=discord.Colour.dark_green(),
 								title='✅ Raid/spam protection has been lifted on this channel', content=content)
@@ -204,7 +204,8 @@ class Moderation(commands.Cog):
 		filedir = os.path.join(filedir, "../misc/memed_users.db")
 		conn = sqlite3.connect(filedir)
 		c = conn.cursor()
-		c.execute("INSERT INTO memed_users VALUES (?,?)", (user.id, datetime.datetime.now() + datetime.timedelta(0, mins)))
+		c.execute("INSERT INTO memed_users VALUES (?,?)", (user.id, datetime.datetime.now() + datetime.timedelta(0, 0, 0, 0, mins)))
+		conn.commit()
 		conn.close()
 		content = f"User {user.mention} has been banned from {meme_channel.mention} for {mins} minutes."
 		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
@@ -219,10 +220,11 @@ class Moderation(commands.Cog):
 		except discord.errors.Forbidden:
 			pass
 		filedir = os.path.dirname(__file__)
-		filedir = os.path.join(filedir, "../misc/memed_users.pkl")
+		filedir = os.path.join(filedir, "../misc/memed_users.db")
 		conn = sqlite3.connect(filedir)
 		c = conn.cursor()
-		c.execute("DELETE FROM memed_users WHERE user_id=?", user.id)
+		c.execute("DELETE FROM memed_users WHERE user_id=?", (user.id,))
+		conn.commit()
 		conn.close()
 		content = f"User {user.mention} has been unbanned from {meme_channel.mention}."
 		await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),

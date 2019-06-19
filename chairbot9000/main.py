@@ -49,7 +49,6 @@ class Chairbot9000(commands.Bot):
 				print(f"Failed to load extension {extension}\n{exc}")
 
 	async def on_ready(self):
-		self.bg_task = self.loop.create_task(self.check_memed_users())
 		import _version as v
 		startup_info = [
 			f"chairbot9000 v. {v.__version__} by memethyl#2461",
@@ -65,6 +64,9 @@ class Chairbot9000(commands.Bot):
 		del startup_info, box_length, v
 
 	async def on_message(self, message):
+		# background tasks are basically impossible so this is the best i can do
+		if not message.author.bot:
+			await self.check_memed_users()
 		# add reactions to report
 		if message.author.id == 204255221017214977 and message.channel.id == config.cfg["reporting"]["report_channel"]:
 								# YAGPDB.xyz#8760
@@ -81,7 +83,10 @@ class Chairbot9000(commands.Bot):
 
 	async def on_raw_reaction_add(self, payload):
 		channel = self.get_channel(payload.channel_id)
-		message = await channel.fetch_message(payload.message_id)
+		try:
+			message = await channel.fetch_message(payload.message_id)
+		except discord.errors.NotFound:
+			return
 		user = await self.fetch_user(payload.user_id)
 		if payload.emoji.name == config.cfg["starboard"]["emoji"]:
 			await post_starred(bot, config.cfg, message, payload.emoji.name, user)
@@ -98,7 +103,10 @@ class Chairbot9000(commands.Bot):
 
 	async def on_raw_reaction_remove(self, payload):
 		channel = self.get_channel(payload.channel_id)
-		message = await channel.fetch_message(payload.message_id)
+		try:
+			message = await channel.fetch_message(payload.message_id)
+		except discord.errors.NotFound:
+			return
 		user = await self.fetch_user(payload.user_id)
 		if payload.emoji.name == config.cfg["starboard"]["emoji"] and user != message.author:
 			await post_starred(bot, config.cfg, message, payload.emoji.name, user)
@@ -130,23 +138,21 @@ class Chairbot9000(commands.Bot):
 			return False
 	
 	async def check_memed_users(self):
-		await self.wait_until_ready()
-		while not self.is_closed():
-			meme_channel = discord.utils.get(self.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
-			filedir = os.path.dirname(__file__)
-			filedir = os.path.join(filedir, "misc/memed_users.db")
-			conn = sqlite3.connect(filedir)
-			c = conn.cursor()
-			c.execute("SELECT * FROM memed_users")
-			memed_users = c.fetchall()
-			if memed_users != []:
-				for user in memed_users[:]:
-					if time.time() >= time.mktime(time.strptime(user[1], '%Y-%m-%d %H:%M:%S.%f')):
-						await meme_channel.set_permissions(self.get_user(user[0]), overwrite=None, reason="Unbanning user from the meme channel")
-						c.execute("DELETE FROM memed_users WHERE user_id=?", user[0])
-						memed_users.remove(user)
-			conn.close()
-			await asyncio.sleep(120) # once per minute seemed a little too frequent so i chose two minutes instead
+		meme_channel = discord.utils.get(self.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
+		filedir = os.path.dirname(__file__)
+		filedir = os.path.join(filedir, "misc/memed_users.db")
+		conn = sqlite3.connect(filedir)
+		c = conn.cursor()
+		c.execute("SELECT * FROM memed_users")
+		memed_users = c.fetchall()
+		if memed_users != []:
+			for user in memed_users[:]:
+				if time.time() >= time.mktime(time.strptime(user[1], '%Y-%m-%d %H:%M:%S.%f')):
+					await meme_channel.set_permissions(self.get_user(user[0]), overwrite=None, reason="Unbanning user from the meme channel")
+					c.execute("DELETE FROM memed_users WHERE user_id=?", (user[0],))
+					memed_users.remove(user)
+		conn.commit()
+		conn.close()
 
 bot = Chairbot9000(command_prefix=config.cfg["main"]["prefix"])
 tokenobject = open(token_path, 'rb')
