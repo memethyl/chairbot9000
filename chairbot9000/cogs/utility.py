@@ -58,7 +58,7 @@ class Utility(commands.Cog):
 		config_path = os.path.join(config_path, "../misc/config.cfg")
 		config_file = open(config_path, 'rb')
 		try:
-			await ctx.author.send("Here's my current config.", file=discord.File(config_file))
+			await ctx.author.send("Here's my current config.", file=discord.File(config_file, filename="config.cfg"))
 		except:
 			await ctx.channel.send("I couldn't send my config file! Make sure that I can DM you before trying again.")
 

@@ -147,7 +147,10 @@ class Chairbot9000(commands.Bot):
 		memed_users = c.fetchall()
 		if memed_users != []:
 			for user in memed_users[:]:
-				if time.time() >= time.mktime(time.strptime(user[1], '%Y-%m-%d %H:%M:%S.%f')):
+				if not self.get_user(user[0]):
+					c.execute("DELETE FROM memed_users WHERE user_id=?", (user[0],))
+					memed_users.remove(user)
+				elif time.time() >= time.mktime(time.strptime(user[1], '%Y-%m-%d %H:%M:%S.%f')):
 					await meme_channel.set_permissions(self.get_user(user[0]), overwrite=None, reason="Unbanning user from the meme channel")
 					c.execute("DELETE FROM memed_users WHERE user_id=?", (user[0],))
 					memed_users.remove(user)
