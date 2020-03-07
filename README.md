@@ -3,7 +3,7 @@ A rewrite of https://github.com/elatric/mumbot, a specialized bot for Mum's Hous
 
 # Dependencies
 - The discord.py library (version 1.0.0+) - https://github.com/Rapptz/discord.py/tree/rewrite
-- Python 3.6.x
+- Python 3.8 or higher
 
 # Setting up the bot
 The bot's only meant for the Mum's House Discord server, but basic setup goes like this:
