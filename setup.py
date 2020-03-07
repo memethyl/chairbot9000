@@ -29,6 +29,7 @@ conn.close()
 def config_setup(config):
 	default_config = {
 		"moderation": {
+			"meme_channel": 0
 		},
 		"broadcasting": {
 		},
@@ -41,6 +42,7 @@ def config_setup(config):
 		},
 		"starboard": {
 			"emoji": "⭐",
+			"override_role": 0,
 			"repost_history": 100,
 			"star_amounts": {
 			}
@@ -48,6 +50,9 @@ def config_setup(config):
 	}
 	default_config["moderation"]["autoban_mins"] = int(input("\nHow young should an account be (less than X minutes old) for chairbot9000 to autoban it? "))
 	default_config["moderation"]["banlog_channel"] = int(input("\nProvide the ID (e.g. 123456789012345678) of the text channel you want chairbot to log autobans to. "))
+
+	if meme_channel := input(f"\nPlease enter the ID of the channel you want to use as the meme channel. You CAN leave this blank, but {default_config['main']['prefix']}meme will not work."):
+		default_config["moderation"]["meme_channel"] = int(meme_channel)
 	
 	default_config["broadcasting"]["announce_channel"] = int(input("\nProvide the ID of the text channel you want chairbot to announce broadcasts in. "))
 	default_config["broadcasting"]["broadcast_vc"] = int(input("\nProvide the ID of the voice channel you want to do broadcasts in. "))
@@ -55,7 +60,7 @@ def config_setup(config):
 	if prefix:=input("\nThe default chairbot prefix is '&'.\nIf you want to use a certain prefix for chairbot commands (e.g. !help instead of &help), enter it now. "):
 		default_config["main"]["prefix"] = prefix
 
-	default_config["main"]["perms"]["global"] = input("\nProvide the NAME of the minimum role required to use ANY chairbot command. ")
+	default_config["main"]["perms"]["global"] = int(input("\nProvide the ID of the minimum role required to use ANY chairbot command. "))
 	print(f"Note: If you want to require higher roles for certain commands, run `{default_config['main']['prefix']}help perms set` once the bot is online.")
 
 	default_config["reporting"]["report_channel"] = int(input("\nNOTE: IN ORDER FOR REPORTING TO WORK, THE \"YAGPDB\" BOT (https://yagpdb.xyz/) MUST BE USED; THIS MAY CHANGE IN A LATER UPDATE\nProvide the ID of the text channel you want YAGPDB reports to be sent to and handled in. "))
@@ -64,12 +69,14 @@ def config_setup(config):
 		default_config["starboard"]["emoji"] = emoji
 
 	if (role_override := input("\nDo you want people with a certain role to be able to put messages on the starboard, regardless of reaction count? (y/n) ").lower()) == 'y':
-		default_config["starboard"]["override_role"] = input("\nIn that case, enter the NAME of the role required to do this. ")
+		default_config["starboard"]["role_override"] = 'true'
+		default_config["starboard"]["override_role"] = int(input("\nIn that case, enter the ID of the role required to do this. "))
 	elif role_override == 'n':
 		print("Okay, but note that you'll have to set this later if you change your mind.")
+		default_config["starboard"]["role_override"] = 'false'
 	else:
 		print("Invalid input provided; defaulting to 'n'.")
-		default_config["starboard"]["role_override"] = 'n'
+		default_config["starboard"]["role_override"] = 'false'
 
 	if repost_history := input("\nHow many previously added posts do you want chairbot to look through when checking if a post already exists on the starboard? (default is 100) "):
 		default_config["starboard"]["repost_history"] = int(repost_history)
