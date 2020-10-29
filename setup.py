@@ -29,6 +29,7 @@ conn.close()
 def config_setup(config):
 	default_config = {
 		"moderation": {
+			"invite_regex": "discordapp\\.com\\/invite\\/|discord\\.gg\\/|\\/gg\\.drocsid|\\/etivni\\/moc.ppadrocsid",
 			"meme_channel": 0
 		},
 		"broadcasting": {
@@ -36,11 +37,15 @@ def config_setup(config):
 		"main": {
 			"perms": {
 			},
-			"prefix": "&"
+			"prefix": "&",
+			"vc_text_channel": 0 # todo: add this to setup script
 		},
 		"reporting": {
 		},
 		"starboard": {
+			"blacklisted_users": [
+
+			],
 			"emoji": "⭐",
 			"override_role": 0,
 			"repost_history": 100,
