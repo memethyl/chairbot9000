@@ -157,7 +157,9 @@ class Chairbot9000(commands.Bot):
 		conn.commit()
 		conn.close()
 
-bot = Chairbot9000(command_prefix=config.cfg["main"]["prefix"])
+intents = discord.Intents(members=True, messages=True, reactions=True, guilds=True)
+member_cache_flags = discord.MemberCacheFlags.from_intents(intents)
+bot = Chairbot9000(command_prefix=config.cfg["main"]["prefix"], intents=intents, member_cache_flags=member_cache_flags)
 tokenobject = open(token_path, 'rb')
 tokenid = pickle.load(tokenobject)
 tokenobject.close()
