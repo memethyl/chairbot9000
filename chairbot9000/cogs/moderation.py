@@ -98,7 +98,7 @@ class Moderation(commands.Cog):
 								title='✅ Raid/spam protection has been lifted on this channel', content=content)
 			channels_file.close()
 			remove(filedir) # remove the file to tie up any loose ends
-	@commands.command(description="Purge a certain amount of messages from a channel.")
+	@commands.command(description="Purge a certain amount of messages from a channel.", aliases=["prune"])
 	async def purge(self, ctx, amount: int, first_message: int=None):
 		"""&purge <number of messages to delete> [ID of the first message to delete]"""
 		if first_message:
