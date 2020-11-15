@@ -25,18 +25,18 @@ class Utility(commands.Cog):
 		await message.delete()
 	# shamelessly stolen from https://gist.github.com/leovoel/46cd89ed6a8f41fd09c5
 	@commands.command(description="Loads an extension.")
-	async def load(ctx, extension_name: str):
+	async def load(self, ctx, extension_name: str):
 		"""&load <extension name, usually cogs.X>"""
 		try:
-			ctx.load_extension(extension_name)
+			self.bot.load_extension(extension_name)
 		except (AttributeError, ImportError) as e:
 			await ctx.send(f"```py\n{type(e).__name__}: {str(e)}\n```")
 			return
 		await ctx.send(f"{extension_name} loaded.")
 	@commands.command(description="Unloads an extension.")
-	async def unload(ctx, extension_name: str):
+	async def unload(self, ctx, extension_name: str):
 		"""&unload <extension name, usually cogs.X>"""
-		ctx.unload_extension(extension_name)
+		self.bot.unload_extension(extension_name)
 		await ctx.send(f"{extension_name} unloaded.")
 	@commands.command(description="Set the mod role BY NAME for future permissions checks.\nNOTE: THIS MEANS ROLE MENTIONS WON'T WORK HERE")
 	async def modset(self, ctx, rolename: str):
