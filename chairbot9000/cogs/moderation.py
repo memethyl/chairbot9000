@@ -178,13 +178,13 @@ In addition, numbers without time units will default to minutes. (example: `&mem
 		_time = [(int(x), y) for (x,y) in _time]
 		mins = 0
 		for amt in _time:
-			if amt[1] is 'm':
+			if amt[1] == 'm':
 				mins += amt[0]
-			elif amt[1] is 'h':
+			elif amt[1] == 'h':
 				mins += amt[0]*60
-			elif amt[1] is 'd':
+			elif amt[1] == 'd':
 				mins += amt[0]*60*24
-			elif amt[1] is 'w':
+			elif amt[1] == 'w':
 				mins += amt[0]*60*24*7
 			else:
 				pass
