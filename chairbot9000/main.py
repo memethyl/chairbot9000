@@ -23,7 +23,7 @@ import asyncio
 import cogs.config as     config
 from   cogs.misc   import sendembed
 from   datetime    import datetime
-from   discord.ext import commands
+from   discord.ext import commands, tasks
 import discord
 import os
 import pickle
@@ -47,6 +47,7 @@ class Chairbot9000(commands.Bot):
 			except Exception as e:
 				exc = f"{type(e).__name__}: {e}"
 				print(f"Failed to load extension {extension}\n{exc}")
+		self.check_memed_users.start()
 
 	async def on_ready(self):
 		import _version as v
@@ -64,9 +65,6 @@ class Chairbot9000(commands.Bot):
 		del startup_info, box_length, v
 
 	async def on_message(self, message):
-		# background tasks are basically impossible so this is the best i can do
-		if not message.author.bot:
-			await self.check_memed_users()
 		# add reactions to report
 		if message.author.id == 204255221017214977 and message.channel.id == config.cfg["reporting"]["report_channel"]:
 								# YAGPDB.xyz#8760
@@ -137,6 +135,7 @@ class Chairbot9000(commands.Bot):
 				return True
 			return False
 	
+	@tasks.loop(minutes=1)
 	async def check_memed_users(self):
 		meme_channel = discord.utils.get(self.get_all_channels(), id=config.cfg["moderation"]["meme_channel"])
 		filedir = os.path.dirname(__file__)
