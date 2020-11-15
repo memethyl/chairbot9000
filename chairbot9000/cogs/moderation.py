@@ -170,10 +170,11 @@ class Moderation(commands.Cog):
 			await sendembed(channel=ctx.channel, color=discord.Colour.dark_green(),
 							title=f"{len(successful_bans)} Successful Bans, {len(failed_bans)} Failed Bans",
 							content=content)
-	@commands.command(description="Ban a user from the meme channel (specified in config.cfg) for a certain amount of time. Defaults to 24 hours if no time is given.")
+	@commands.command(description="""Ban a user from the meme channel (specified in config.cfg) for a certain amount of time. Defaults to 24 hours if no time is given.
+In addition, numbers without time units will default to minutes. (example: `&meme <user> 1440` becomes `&meme <user> 1440m`)""")
 	async def meme(self, ctx, user: discord.User, _time: str="24h"):
 		"""&meme <user mention> <time, formatted like 1w3d6h56m, 12h, etc>"""
-		_time = re.findall(r"(\d+)([wdhm])", _time)
+		_time = re.findall(r"(\d+)([wdhm])", _time) or (re.search(r"^(\d+)$", _time).group(0), 'm')
 		_time = [(int(x), y) for (x,y) in _time]
 		mins = 0
 		for amt in _time:
